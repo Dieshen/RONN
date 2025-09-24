@@ -45,6 +45,8 @@ pub enum DataType {
     I32,
     /// Unsigned 8-bit integer.
     U8,
+    /// Unsigned 32-bit integer.
+    U32,
 }
 
 /// Multi-dimensional tensor with shape and data type information.

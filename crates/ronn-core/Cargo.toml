@@ -24,15 +24,20 @@ uuid.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 
+# Half precision support
+half.workspace = true
+
 # Logging
 tracing.workspace = true
 
 # Concurrency
 dashmap.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
 proptest.workspace = true
+futures = "0.3"
 
 # Benchmarks will be added later
 # [[bench]]

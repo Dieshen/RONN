@@ -18,13 +18,10 @@
 //! use ronn_core::{Tensor, DataType, TensorLayout};
 //!
 //! // Create a 2x3 tensor with zeros
-//! let data = vec![0.0; 6];
-//! let tensor = Tensor {
-//!     data,
-//!     shape: vec![2, 3],
-//!     dtype: DataType::F32,
-//!     layout: TensorLayout::RowMajor,
-//! };
+//! let tensor = Tensor::zeros(vec![2, 3], DataType::F32, TensorLayout::RowMajor)?;
+//! assert_eq!(tensor.shape(), vec![2, 3]);
+//! assert_eq!(tensor.numel(), 6);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
 #![deny(missing_docs)]
@@ -33,13 +30,21 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 
+pub mod graph;
+pub mod ops;
+pub mod session;
+pub mod tensor;
 pub mod types;
 
 // Re-export commonly used types
+pub use graph::{GraphBuilder, GraphStatistics};
+pub use ops::{ArithmeticOps, MatrixOps, ReductionOps, ShapeOps};
+pub use session::{SessionManager, SessionConfig, SessionStatistics, InferenceSession, GlobalStatistics};
+pub use tensor::Tensor;
 pub use types::{
     AttributeValue, CompiledKernel, DataType, ExecutionProvider, GraphEdge, GraphNode, MemoryType,
     ModelGraph, NodeId, OperatorSpec, PerformanceProfile, ProviderId, ProviderCapability,
-    ProviderConfig, ResourceRequirements, SessionId, SubGraph, Tensor, TensorAllocator,
+    ProviderConfig, ResourceRequirements, SessionId, SubGraph, TensorAllocator,
     TensorBuffer, TensorLayout,
 };
 

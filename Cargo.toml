@@ -45,6 +45,7 @@ safetensors = "0.4"
 anyhow = "1.0"
 thiserror = "1.0"
 uuid = { version = "1.6", features = ["v4", "serde"] }
+half = "2.6"
 
 # Logging and observability
 tracing = "0.1"
