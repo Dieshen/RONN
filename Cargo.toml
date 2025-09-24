@@ -1,0 +1,101 @@
+[workspace]
+members = [
+    "crates/ronn-core",
+    "crates/ronn-providers",
+    "crates/ronn-graph",
+    "crates/ronn-hrm",
+    "crates/ronn-memory",
+    "crates/ronn-learning",
+    "crates/ronn-onnx",
+    "crates/ronn-api",
+    "examples/*"
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["RONN Contributors"]
+license = "MIT"
+repository = "https://github.com/your-org/ronn"
+homepage = "https://github.com/your-org/ronn"
+documentation = "https://docs.rs/ronn"
+keywords = ["ml", "inference", "onnx", "brain-inspired", "runtime"]
+categories = ["science", "algorithms", "wasm"]
+rust-version = "1.90.0"
+
+[workspace.dependencies]
+# Core tensor operations and GPU acceleration
+candle-core = "0.9"
+candle-nn = "0.9"
+candle-transformers = "0.9"
+
+# Async runtime and concurrency
+tokio = { version = "1.35", features = ["full"] }
+rayon = "1.7"
+dashmap = "5.5"
+
+# Serialization and data handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+prost = "0.12"
+safetensors = "0.4"
+
+# Error handling and utilities
+anyhow = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Logging and observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Memory and performance
+hnsw = "0.11"
+memmap2 = "0.9"
+
+# Async and networking
+reqwest = { version = "0.11", features = ["json"] }
+
+# Testing and benchmarking
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.4"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unused_imports = "warn"
+unused_mut = "warn"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
+cargo = "warn"
+# Disable some pedantic lints that are too noisy
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+
+[profile.dev]
+# Fast compilation for development
+opt-level = 0
+debug = true
+split-debuginfo = "unpacked"
+
+[profile.release]
+# Maximum optimization for production builds
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
+[profile.bench]
+# Optimized for benchmarking
+inherits = "release"
+debug = true
+
+[profile.test]
+# Fast tests with minimal optimization
+opt-level = 1

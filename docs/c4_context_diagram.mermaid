@@ -1,0 +1,39 @@
+graph TB
+    %% External Actors
+    MLDev["👨‍💻 ML Developer<br/>Train & Deploy Models"]
+    AppDev["👩‍💻 Application Developer<br/>Integrate ML Features"]
+    EdgeDevice["🔌 Edge Device<br/>Raspberry Pi, Jetson"]
+    CloudInfra["☁️ Cloud Infrastructure<br/>AWS, Azure, GCP"]
+    
+    %% Core System
+    RustMLRuntime["🦀 Rust ML Runtime<br/>---<br/>Cross-platform ML inference<br/>& training accelerator<br/><br/>• Pure Rust implementation<br/>• Brain-inspired architecture<br/>• Edge-optimized performance<br/>• Multi-modal capabilities"]
+    
+    %% External Systems
+    ModelFormats["📄 Model Formats<br/>---<br/>• SafeTensors<br/>• ONNX<br/>• HuggingFace Models<br/>• Custom formats"]
+    
+    Hardware["🔧 Hardware Accelerators<br/>---<br/>• CPU (SIMD)<br/>• GPU (CUDA/ROCm)<br/>• NPU/TPU<br/>• Custom ASICs"]
+    
+    DataSources["💾 Data Sources<br/>---<br/>• Training datasets<br/>• Real-time streams<br/>• Knowledge bases<br/>• Sensor inputs"]
+    
+    MonitoringTools["📊 Monitoring & Observability<br/>---<br/>• Prometheus<br/>• Grafana<br/>• Custom dashboards<br/>• Telemetry systems"]
+    
+    %% Relationships
+    MLDev -->|"Trains models,<br/>exports to SafeTensors"| RustMLRuntime
+    AppDev -->|"Uses API,<br/>integrates inference"| RustMLRuntime
+    
+    RustMLRuntime -->|"Loads models<br/>from formats"| ModelFormats
+    RustMLRuntime -->|"Accelerates computation<br/>on available hardware"| Hardware
+    RustMLRuntime -->|"Ingests training<br/>& inference data"| DataSources
+    RustMLRuntime -->|"Exports metrics<br/>& performance data"| MonitoringTools
+    
+    EdgeDevice -->|"Deploys as single<br/>binary, runs locally"| RustMLRuntime
+    CloudInfra -->|"Scales workloads,<br/>distributed inference"| RustMLRuntime
+    
+    %% Styling
+    classDef actor fill:#e1f5fe
+    classDef system fill:#f3e5f5
+    classDef external fill:#fff3e0
+    
+    class MLDev,AppDev actor
+    class RustMLRuntime system
+    class ModelFormats,Hardware,DataSources,MonitoringTools,EdgeDevice,CloudInfra external

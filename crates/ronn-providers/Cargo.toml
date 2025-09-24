@@ -1,0 +1,46 @@
+[package]
+name = "ronn-providers"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+description = "Execution provider framework for RONN - hardware abstraction layer"
+
+[dependencies]
+ronn-core = { path = "../ronn-core" }
+
+# Core tensor operations
+candle-core.workspace = true
+candle-nn.workspace = true
+
+# Parallel processing
+rayon.workspace = true
+tokio.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Concurrency
+dashmap.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[features]
+default = ["cpu"]
+cpu = []
+gpu = ["candle-core/cuda"]
+webasm = []
+
+[lints]
+workspace = true

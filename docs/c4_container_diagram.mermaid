@@ -1,0 +1,73 @@
+graph TB
+    %% External Actors
+    Users["👨‍💻 Users<br/>(ML Developers, App Developers)"]
+    
+    %% Main Containers within the Rust ML Runtime
+    subgraph "Rust ML Runtime System"
+        APILayer["🌐 API Layer<br/>---<br/>Language: Rust + C FFI<br/>Tech: REST, gRPC, Native APIs<br/><br/>• Python bindings<br/>• C/C++ interface<br/>• WebAssembly exports<br/>• CLI interface"]
+        
+        CoreEngine["⚡ Core Inference Engine<br/>---<br/>Language: Pure Rust<br/>Tech: Candle, SIMD<br/><br/>• Graph optimization<br/>• Execution planning<br/>• Memory management<br/>• Thread orchestration"]
+        
+        HRMModule["🧠 Hierarchical Reasoning Module<br/>---<br/>Language: Pure Rust<br/>Tech: Neural architectures<br/><br/>• High-level planning<br/>• Low-level execution<br/>• Task routing<br/>• Attention mechanisms"]
+        
+        MemorySystem["💾 Multi-Tier Memory System<br/>---<br/>Language: Pure Rust<br/>Tech: HNSW, Custom indexes<br/><br/>• Working memory<br/>• Episodic memory<br/>• Semantic memory<br/>• Sleep consolidation"]
+        
+        ExecutionProviders["🔧 Execution Provider Framework<br/>---<br/>Language: Pure Rust + traits<br/>Tech: Plugin architecture<br/><br/>• CPU provider (SIMD)<br/>• GPU provider (Candle)<br/>• Custom accelerators<br/>• Fallback mechanisms"]
+        
+        ModelLoader["📥 Model Management<br/>---<br/>Language: Pure Rust<br/>Tech: SafeTensors, Serde<br/><br/>• Model parsing<br/>• Weight loading<br/>• Format conversion<br/>• Checkpoint system"]
+        
+        LearningEngine["🎯 Continual Learning Engine<br/>---<br/>Language: Pure Rust<br/>Tech: Multi-timescale learning<br/><br/>• Online adaptation<br/>• Elastic weights<br/>• Catastrophic forgetting prevention<br/>• Experience replay"]
+        
+        ObservabilityLayer["📊 Observability & Metrics<br/>---<br/>Language: Pure Rust<br/>Tech: Tracing, Prometheus<br/><br/>• Performance monitoring<br/>• Resource utilization<br/>• Error tracking<br/>• Debug instrumentation"]
+    end
+    
+    %% External Systems
+    ModelStorage["💿 Model Storage<br/>---<br/>• SafeTensors files<br/>• Distributed storage<br/>• Version control<br/>• Artifact registry"]
+    
+    Hardware["🖥️ Hardware Layer<br/>---<br/>• Multi-core CPUs<br/>• GPUs (CUDA/ROCm)<br/>• Specialized NPUs<br/>• Memory hierarchy"]
+    
+    Monitoring["📈 External Monitoring<br/>---<br/>• Prometheus<br/>• Grafana dashboards<br/>• Log aggregation<br/>• Alert systems"]
+    
+    %% User Interactions
+    Users -->|"HTTP/gRPC requests<br/>Native API calls"| APILayer
+    
+    %% Internal Container Interactions
+    APILayer -->|"Inference requests<br/>Model management"| CoreEngine
+    APILayer -->|"Load/save models<br/>Checkpoint operations"| ModelLoader
+    
+    CoreEngine -->|"Complex reasoning<br/>Task delegation"| HRMModule
+    CoreEngine -->|"Memory operations<br/>Context retrieval"| MemorySystem
+    CoreEngine -->|"Kernel execution<br/>Hardware acceleration"| ExecutionProviders
+    CoreEngine -->|"Online learning<br/>Weight updates"| LearningEngine
+    CoreEngine -->|"Performance metrics<br/>Execution traces"| ObservabilityLayer
+    
+    HRMModule -->|"Experience storage<br/>Pattern recognition"| MemorySystem
+    HRMModule -->|"Learning signals<br/>Adaptation triggers"| LearningEngine
+    
+    MemorySystem -->|"Consolidation triggers<br/>Memory cleanup"| LearningEngine
+    
+    %% External System Interactions
+    ModelLoader <-->|"Load/save models<br/>Weight synchronization"| ModelStorage
+    ExecutionProviders -->|"Hardware abstraction<br/>Kernel dispatch"| Hardware
+    ObservabilityLayer -->|"Metrics export<br/>Trace data"| Monitoring
+    
+    %% Styling
+    classDef actor fill:#e1f5fe
+    classDef api fill:#e8f5e8
+    classDef core fill:#fff3e0
+    classDef brain fill:#f3e5f5
+    classDef memory fill:#fce4ec
+    classDef execution fill:#e0f2f1
+    classDef learning fill:#f1f8e9
+    classDef observability fill:#e3f2fd
+    classDef external fill:#f5f5f5
+    
+    class Users actor
+    class APILayer api
+    class CoreEngine core
+    class HRMModule brain
+    class MemorySystem memory
+    class ExecutionProviders execution
+    class ModelLoader,LearningEngine learning
+    class ObservabilityLayer observability
+    class ModelStorage,Hardware,Monitoring external

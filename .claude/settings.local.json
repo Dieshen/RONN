@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:onnx.ai)",
+      "WebFetch(domain:github.com)"
+    ]
+  },
+  "outputStyle": "Expert Engineer"
+}

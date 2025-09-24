@@ -1,0 +1,80 @@
+graph TB
+    %% External Containers
+    APILayer["🌐 API Layer"]
+    HRMModule["🧠 HRM Module"] 
+    MemorySystem["💾 Memory System"]
+    ExecutionProviders["🔧 Execution Providers"]
+    ModelLoader["📥 Model Loader"]
+    
+    subgraph "⚡ Core Inference Engine"
+        %% Core Components
+        SessionManager["🎭 Session Manager<br/>---<br/>• Session lifecycle<br/>• Context isolation<br/>• Resource management<br/>• Thread safety"]
+        
+        GraphOptimizer["📊 Graph Optimizer<br/>---<br/>• Constant folding<br/>• Operator fusion<br/>• Dead code elimination<br/>• Memory layout optimization"]
+        
+        GraphPartitioner["🔀 Graph Partitioner<br/>---<br/>• Provider capability query<br/>• Subgraph assignment<br/>• Dependency analysis<br/>• Load balancing"]
+        
+        ExecutionPlanner["📅 Execution Planner<br/>---<br/>• Topological sorting<br/>• Parallelization strategy<br/>• Memory scheduling<br/>• Pipeline optimization"]
+        
+        KernelDispatcher["⚙️ Kernel Dispatcher<br/>---<br/>• Operator routing<br/>• Kernel selection<br/>• Batching strategy<br/>• Error handling"]
+        
+        TensorManager["🧮 Tensor Manager<br/>---<br/>• Memory allocation<br/>• Buffer pooling<br/>• Type conversion<br/>• Shape inference"]
+        
+        ThreadPool["🧵 Thread Pool<br/>---<br/>• Work stealing<br/>• NUMA awareness<br/>• Priority scheduling<br/>• Resource limits"]
+        
+        CacheManager["💨 Cache Manager<br/>---<br/>• Compiled graph cache<br/>• Kernel cache<br/>• Memory pattern cache<br/>• Eviction policies"]
+        
+        ProfilerService["⏱️ Profiler Service<br/>---<br/>• Execution timing<br/>• Memory profiling<br/>• Bottleneck detection<br/>• Performance metrics"]
+        
+        ErrorHandler["🚨 Error Handler<br/>---<br/>• Exception management<br/>• Graceful degradation<br/>• Recovery strategies<br/>• Diagnostic info"]
+    end
+    
+    %% External Component Interactions
+    APILayer -->|"CreateSession()<br/>Run()<br/>GetMetadata()"| SessionManager
+    
+    HRMModule -->|"Complex inference<br/>Multi-stage processing"| SessionManager
+    MemorySystem -->|"Context retrieval<br/>Pattern matching"| SessionManager
+    ModelLoader -->|"Model graphs<br/>Weight tensors"| SessionManager
+    
+    %% Internal Component Flow
+    SessionManager -->|"Model graph<br/>Optimization request"| GraphOptimizer
+    GraphOptimizer -->|"Optimized graph<br/>Transformation log"| GraphPartitioner
+    GraphPartitioner -->|"Partitioned subgraphs<br/>Provider assignments"| ExecutionPlanner
+    ExecutionPlanner -->|"Execution plan<br/>Resource requirements"| KernelDispatcher
+    
+    KernelDispatcher -->|"Kernel requests<br/>Operator dispatch"| ExecutionProviders
+    KernelDispatcher -->|"Tensor allocation<br/>Buffer management"| TensorManager
+    KernelDispatcher -->|"Parallel tasks<br/>Work distribution"| ThreadPool
+    
+    SessionManager -->|"Session state<br/>Compiled graphs"| CacheManager
+    SessionManager -->|"Performance data<br/>Execution traces"| ProfilerService
+    SessionManager -->|"Error events<br/>Exception context"| ErrorHandler
+    
+    %% Cross-cutting interactions
+    TensorManager -->|"Memory statistics<br/>Allocation patterns"| ProfilerService
+    ThreadPool -->|"Thread utilization<br/>Queue metrics"| ProfilerService
+    ExecutionProviders -->|"Kernel performance<br/>Hardware metrics"| ProfilerService
+    
+    ErrorHandler -->|"Diagnostic data<br/>Error telemetry"| ProfilerService
+    CacheManager -->|"Cache statistics<br/>Hit/miss ratios"| ProfilerService
+    
+    %% Performance feedback loops
+    ProfilerService -.->|"Optimization hints<br/>Performance feedback"| GraphOptimizer
+    ProfilerService -.->|"Load balancing data<br/>Bottleneck info"| GraphPartitioner
+    
+    %% Styling
+    classDef external fill:#e3f2fd
+    classDef session fill:#e8f5e8
+    classDef optimization fill:#fff3e0
+    classDef execution fill:#f3e5f5
+    classDef resource fill:#e0f2f1
+    classDef observability fill:#fce4ec
+    classDef error fill:#ffebee
+    
+    class APILayer,HRMModule,MemorySystem,ExecutionProviders,ModelLoader external
+    class SessionManager session
+    class GraphOptimizer,GraphPartitioner optimization
+    class ExecutionPlanner,KernelDispatcher execution
+    class TensorManager,ThreadPool,CacheManager resource
+    class ProfilerService observability
+    class ErrorHandler error

@@ -1,0 +1,47 @@
+[package]
+name = "ronn-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+description = "Core runtime engine for RONN - fundamental tensor operations, data types, and session management"
+
+[dependencies]
+# Core tensor operations
+candle-core.workspace = true
+
+# Serialization
+serde.workspace = true
+uuid.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Concurrency
+dashmap.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+proptest.workspace = true
+
+# Benchmarks will be added later
+# [[bench]]
+# name = "tensor_ops"
+# harness = false
+
+[features]
+default = []
+gpu = ["candle-core/cuda"]
+
+[lints]
+workspace = true

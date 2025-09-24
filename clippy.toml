@@ -1,0 +1,33 @@
+# Clippy configuration for RONN project
+
+# Complexity thresholds
+cognitive-complexity-threshold = 25
+type-complexity-threshold = 100
+
+# Documentation requirements
+missing-docs-in-crate-items = true
+
+# Performance optimizations
+avoid-breaking-exported-api = false
+
+# Allowed lints for research/experimental code
+allowed-lints = [
+    # Allow TODO comments in development
+    "todo",
+    # Allow missing docs for internal types during development
+    "missing_docs",
+    # Allow module inception for clear organization
+    "module_inception",
+    # Allow large enums for comprehensive type systems
+    "large_enum_variant",
+    # Allow complex types for ML operations
+    "type_complexity",
+]
+
+# Disallowed lints that should always be errors
+disallowed-lints = [
+    "unsafe_code",
+    "panic",
+    "unimplemented",
+    "unreachable",
+]
