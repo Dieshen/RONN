@@ -69,7 +69,11 @@ impl ShapeOps for Tensor {
         let shape = self.shape();
 
         if start_dim >= shape.len() {
-            return Err(anyhow!("start_dim {} is out of bounds for tensor with {} dimensions", start_dim, shape.len()));
+            return Err(anyhow!(
+                "start_dim {} is out of bounds for tensor with {} dimensions",
+                start_dim,
+                shape.len()
+            ));
         }
 
         if start_dim == 0 {
@@ -100,11 +104,19 @@ impl ShapeOps for Tensor {
         let shape = self.shape();
 
         if dim >= shape.len() {
-            return Err(anyhow!("Dimension {} is out of bounds for tensor with {} dimensions", dim, shape.len()));
+            return Err(anyhow!(
+                "Dimension {} is out of bounds for tensor with {} dimensions",
+                dim,
+                shape.len()
+            ));
         }
 
         if shape[dim] != 1 {
-            return Err(anyhow!("Cannot squeeze dimension {} with size {}", dim, shape[dim]));
+            return Err(anyhow!(
+                "Cannot squeeze dimension {} with size {}",
+                dim,
+                shape[dim]
+            ));
         }
 
         let mut new_shape = shape;
@@ -121,7 +133,11 @@ impl ShapeOps for Tensor {
         let shape = self.shape();
 
         if dim > shape.len() {
-            return Err(anyhow!("Dimension {} is out of bounds for unsqueeze (max {})", dim, shape.len()));
+            return Err(anyhow!(
+                "Dimension {} is out of bounds for unsqueeze (max {})",
+                dim,
+                shape.len()
+            ));
         }
 
         let mut new_shape = shape;
@@ -207,7 +223,11 @@ impl Tensor {
         let shape = self.shape();
 
         if dim >= shape.len() {
-            return Err(anyhow!("Dimension {} is out of bounds for tensor with {} dimensions", dim, shape.len()));
+            return Err(anyhow!(
+                "Dimension {} is out of bounds for tensor with {} dimensions",
+                dim,
+                shape.len()
+            ));
         }
 
         let dim_size = shape[dim];
@@ -235,11 +255,20 @@ impl Tensor {
         let shape = self.shape();
 
         if dim >= shape.len() {
-            return Err(anyhow!("Dimension {} is out of bounds for tensor with {} dimensions", dim, shape.len()));
+            return Err(anyhow!(
+                "Dimension {} is out of bounds for tensor with {} dimensions",
+                dim,
+                shape.len()
+            ));
         }
 
         if start >= end || end > shape[dim] {
-            return Err(anyhow!("Invalid slice range: {}:{} for dimension of size {}", start, end, shape[dim]));
+            return Err(anyhow!(
+                "Invalid slice range: {}:{} for dimension of size {}",
+                start,
+                end,
+                shape[dim]
+            ));
         }
 
         let result_candle = self.candle_tensor().narrow(dim, start, end - start)?;
@@ -261,7 +290,11 @@ impl Tensor {
         let first_shape = first_tensor.shape();
 
         if dim >= first_shape.len() {
-            return Err(anyhow!("Dimension {} is out of bounds for tensor with {} dimensions", dim, first_shape.len()));
+            return Err(anyhow!(
+                "Dimension {} is out of bounds for tensor with {} dimensions",
+                dim,
+                first_shape.len()
+            ));
         }
 
         // Check that all tensors have compatible shapes
@@ -276,7 +309,9 @@ impl Tensor {
                 ));
             }
 
-            for (j, (&dim_size, &expected_size)) in tensor_shape.iter().zip(first_shape.iter()).enumerate() {
+            for (j, (&dim_size, &expected_size)) in
+                tensor_shape.iter().zip(first_shape.iter()).enumerate()
+            {
                 if j != dim && dim_size != expected_size {
                     return Err(anyhow!(
                         "Tensor {} has size {} in dimension {}, expected {}",
@@ -289,10 +324,8 @@ impl Tensor {
             }
         }
 
-        let candle_tensors: Vec<&candle_core::Tensor> = tensors
-            .iter()
-            .map(|t| t.candle_tensor())
-            .collect();
+        let candle_tensors: Vec<&candle_core::Tensor> =
+            tensors.iter().map(|t| t.candle_tensor()).collect();
 
         let result_candle = candle_core::Tensor::cat(&candle_tensors, dim)?;
 
@@ -328,10 +361,8 @@ impl Tensor {
             }
         }
 
-        let candle_tensors: Vec<&candle_core::Tensor> = tensors
-            .iter()
-            .map(|t| t.candle_tensor())
-            .collect();
+        let candle_tensors: Vec<&candle_core::Tensor> =
+            tensors.iter().map(|t| t.candle_tensor()).collect();
 
         let result_candle = candle_core::Tensor::stack(&candle_tensors, dim)?;
 
@@ -400,14 +431,19 @@ impl Tensor {
 
         // This is a simplified implementation - in practice, we'd need more complex indexing
         // For now, this is a placeholder that works for simple cases
-        if padding.iter().all(|&(before, after)| before == 0 && after == 0) {
+        if padding
+            .iter()
+            .all(|&(before, after)| before == 0 && after == 0)
+        {
             // No padding needed
             return Ok(self.clone());
         }
 
         // For non-zero padding, we'd need to implement tensor slicing assignment
         // This is a complex operation that would require more advanced indexing
-        Err(anyhow!("Complex padding operations not yet fully implemented"))
+        Err(anyhow!(
+            "Complex padding operations not yet fully implemented"
+        ))
     }
 }
 
@@ -422,7 +458,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let reshaped = a.reshape(&[3, 2])?;
@@ -440,7 +476,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             vec![2, 2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let flattened = a.flatten()?;
@@ -458,7 +494,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![1, 2, 2, 1],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let squeezed = a.squeeze()?;
@@ -479,7 +515,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let permuted = a.permute(&[1, 0])?;
@@ -494,7 +530,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let sliced = a.slice(1, 1, 3)?;
@@ -509,14 +545,14 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let b = Tensor::from_data(
             vec![5.0, 6.0, 7.0, 8.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let concat_0 = Tensor::concat(&[&a, &b], 0)?;
@@ -534,14 +570,14 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let b = Tensor::from_data(
             vec![5.0, 6.0, 7.0, 8.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let stacked_0 = Tensor::stack(&[&a, &b], 0)?;
@@ -559,7 +595,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![6],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let chunks = a.chunk(3, 0)?;
@@ -577,7 +613,7 @@ mod tests {
             vec![1.0, 2.0],
             vec![2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let repeated = a.repeat(&[3])?;
@@ -591,7 +627,13 @@ mod tests {
 
     #[test]
     fn test_error_handling() {
-        let a = Tensor::from_data(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
+        let a = Tensor::from_data(
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
 
         // Invalid reshape
         assert!(a.reshape(&[3, 2]).is_err());
@@ -618,7 +660,13 @@ mod tests {
         assert!(Tensor::concat(&empty_tensors, 0).is_err());
 
         // Incompatible shapes for concat
-        let b = Tensor::from_data(vec![1.0, 2.0, 3.0], vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
+        let b = Tensor::from_data(
+            vec![1.0, 2.0, 3.0],
+            vec![3],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
         assert!(Tensor::concat(&[&a, &b], 0).is_err());
     }
 }

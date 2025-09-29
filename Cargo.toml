@@ -62,8 +62,14 @@ reqwest = { version = "0.11", features = ["json"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 proptest = "1.4"
 
+# CPU feature detection and SIMD
+cpufeatures = "0.2"
+wide = "0.7"
+
+# Memory alignment (using libc for alignment functions)
+libc = "0.2"
+
 [workspace.lints.rust]
-unsafe_code = "forbid"
 missing_docs = "warn"
 unused_imports = "warn"
 unused_mut = "warn"

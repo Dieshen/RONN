@@ -33,8 +33,19 @@ tracing.workspace = true
 # Concurrency
 dashmap.workspace = true
 
+# CPU features and SIMD
+cpufeatures.workspace = true
+wide.workspace = true
+
+# Memory alignment
+libc.workspace = true
+
+# CPU detection
+num_cpus = "1.16"
+
 [dev-dependencies]
 criterion.workspace = true
+proptest.workspace = true
 
 [features]
 default = ["cpu"]

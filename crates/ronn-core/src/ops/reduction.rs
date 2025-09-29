@@ -3,9 +3,9 @@
 //! This module provides reduction operations that aggregate tensor values
 //! along specified dimensions, including sum, mean, max, min, and others.
 
-use crate::tensor::Tensor;
 use crate::ops::arithmetic::ArithmeticOps;
 use crate::ops::shape::ShapeOps;
+use crate::tensor::Tensor;
 use anyhow::{anyhow, Result};
 
 /// Trait for reduction operations on tensors.
@@ -61,11 +61,7 @@ impl ReductionOps for Tensor {
             result_candle
         };
 
-        Ok(Tensor::from_candle(
-            reshaped,
-            self.dtype(),
-            self.layout(),
-        ))
+        Ok(Tensor::from_candle(reshaped, self.dtype(), self.layout()))
     }
 
     fn sum_dims(&self, dims: &[usize], keep_dim: bool) -> Result<Tensor> {
@@ -122,11 +118,7 @@ impl ReductionOps for Tensor {
             result_candle
         };
 
-        Ok(Tensor::from_candle(
-            reshaped,
-            self.dtype(),
-            self.layout(),
-        ))
+        Ok(Tensor::from_candle(reshaped, self.dtype(), self.layout()))
     }
 
     fn max_dims(&self, dims: &[usize], keep_dim: bool) -> Result<Tensor> {
@@ -172,11 +164,7 @@ impl ReductionOps for Tensor {
             result_candle
         };
 
-        Ok(Tensor::from_candle(
-            reshaped,
-            self.dtype(),
-            self.layout(),
-        ))
+        Ok(Tensor::from_candle(reshaped, self.dtype(), self.layout()))
     }
 
     fn min_dims(&self, dims: &[usize], keep_dim: bool) -> Result<Tensor> {
@@ -361,7 +349,8 @@ impl Tensor {
         // Create a mask for non-zero elements
         let abs_values = self.abs()?;
         let epsilon = 1e-7;
-        let epsilon_tensor = Tensor::from_data(vec![epsilon], vec![1], self.dtype(), self.layout())?;
+        let epsilon_tensor =
+            Tensor::from_data(vec![epsilon], vec![1], self.dtype(), self.layout())?;
 
         // This is a simplified implementation - in practice we'd need proper comparison operations
         // For now, we'll use a placeholder that counts all elements
@@ -369,7 +358,12 @@ impl Tensor {
         let mut output_shape = shape;
         output_shape[dim] = 1;
 
-        let count_tensor = Tensor::from_data(vec![dim_size as f32], output_shape, self.dtype(), self.layout())?;
+        let count_tensor = Tensor::from_data(
+            vec![dim_size as f32],
+            output_shape,
+            self.dtype(),
+            self.layout(),
+        )?;
         Ok(count_tensor)
     }
 
@@ -396,7 +390,12 @@ impl Tensor {
             cumsum_data.push(running_sum);
         }
 
-        Ok(Tensor::from_data(cumsum_data, shape, self.dtype(), self.layout())?)
+        Ok(Tensor::from_data(
+            cumsum_data,
+            shape,
+            self.dtype(),
+            self.layout(),
+        )?)
     }
 
     /// Cumulative product along a dimension.
@@ -421,7 +420,12 @@ impl Tensor {
             cumprod_data.push(running_prod);
         }
 
-        Ok(Tensor::from_data(cumprod_data, shape, self.dtype(), self.layout())?)
+        Ok(Tensor::from_data(
+            cumprod_data,
+            shape,
+            self.dtype(),
+            self.layout(),
+        )?)
     }
 
     /// Softmax operation along a dimension.
@@ -463,7 +467,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         // Sum all elements
@@ -490,7 +494,7 @@ mod tests {
             vec![2.0, 4.0, 6.0, 8.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         // Mean of all elements
@@ -512,7 +516,7 @@ mod tests {
             vec![3.0, 1.0, 4.0, 1.0, 5.0, 9.0],
             vec![2, 3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         // Max of all elements
@@ -534,7 +538,7 @@ mod tests {
             vec![3.0, 4.0],
             vec![2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         // L2 norm
@@ -556,7 +560,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0],
             vec![5],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let variance = a.var_all()?;
@@ -578,7 +582,7 @@ mod tests {
             vec![1.0, 2.0, 3.0],
             vec![3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let softmax_result = a.softmax(0)?;
@@ -600,7 +604,7 @@ mod tests {
             vec![3.0, 1.0, 4.0, 1.0, 5.0, 9.0],
             vec![2, 3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let argmax_dim1 = a.argmax(1, false)?;
@@ -619,7 +623,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![4],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let cumsum = a.cumsum(0)?;
@@ -635,7 +639,13 @@ mod tests {
 
     #[test]
     fn test_error_handling() {
-        let a = Tensor::from_data(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
+        let a = Tensor::from_data(
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
 
         // Out of bounds dimension
         assert!(a.sum_dim(5, false).is_err());
@@ -653,7 +663,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         // Sum with keep_dim=true

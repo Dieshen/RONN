@@ -100,10 +100,16 @@ impl ModelGraph {
         // Validate edges reference existing nodes
         for edge in &self.edges {
             if edge.from_node >= self.nodes.len() {
-                return Err(anyhow!("Edge references non-existent from_node: {}", edge.from_node));
+                return Err(anyhow!(
+                    "Edge references non-existent from_node: {}",
+                    edge.from_node
+                ));
             }
             if edge.to_node >= self.nodes.len() {
-                return Err(anyhow!("Edge references non-existent to_node: {}", edge.to_node));
+                return Err(anyhow!(
+                    "Edge references non-existent to_node: {}",
+                    edge.to_node
+                ));
             }
         }
 
@@ -176,7 +182,10 @@ impl ModelGraph {
         // Check that graph outputs exist in tensor names
         for output in &self.outputs {
             if !all_tensor_names.contains(output) {
-                return Err(anyhow!("Graph output '{}' is not produced by any node", output));
+                return Err(anyhow!(
+                    "Graph output '{}' is not produced by any node",
+                    output
+                ));
             }
         }
 
@@ -216,7 +225,9 @@ impl ModelGraph {
         }
 
         if result.len() != self.nodes.len() {
-            return Err(anyhow!("Graph contains cycles - cannot perform topological sort"));
+            return Err(anyhow!(
+                "Graph contains cycles - cannot perform topological sort"
+            ));
         }
 
         Ok(result)
@@ -426,7 +437,12 @@ impl GraphBuilder {
     }
 
     /// Add an attribute to a node.
-    pub fn add_attribute(&mut self, node_id: NodeId, name: &str, value: AttributeValue) -> &mut Self {
+    pub fn add_attribute(
+        &mut self,
+        node_id: NodeId,
+        name: &str,
+        value: AttributeValue,
+    ) -> &mut Self {
         if let Some(node) = self.graph.get_node_mut(node_id) {
             node.attributes.insert(name.to_string(), value);
         }
@@ -434,7 +450,12 @@ impl GraphBuilder {
     }
 
     /// Connect two nodes with a tensor.
-    pub fn connect(&mut self, from_node: NodeId, to_node: NodeId, tensor_name: &str) -> Result<&mut Self> {
+    pub fn connect(
+        &mut self,
+        from_node: NodeId,
+        to_node: NodeId,
+        tensor_name: &str,
+    ) -> Result<&mut Self> {
         let edge = GraphEdge {
             from_node,
             to_node,
@@ -658,29 +679,35 @@ mod tests {
         let id_c = graph.add_node(node_c);
 
         // Add edges to form a cycle
-        graph.add_edge(GraphEdge {
-            from_node: id_a,
-            to_node: id_b,
-            tensor_name: "a_out".to_string(),
-            tensor_shape: None,
-            tensor_dtype: DataType::F32,
-        }).unwrap();
+        graph
+            .add_edge(GraphEdge {
+                from_node: id_a,
+                to_node: id_b,
+                tensor_name: "a_out".to_string(),
+                tensor_shape: None,
+                tensor_dtype: DataType::F32,
+            })
+            .unwrap();
 
-        graph.add_edge(GraphEdge {
-            from_node: id_b,
-            to_node: id_c,
-            tensor_name: "b_out".to_string(),
-            tensor_shape: None,
-            tensor_dtype: DataType::F32,
-        }).unwrap();
+        graph
+            .add_edge(GraphEdge {
+                from_node: id_b,
+                to_node: id_c,
+                tensor_name: "b_out".to_string(),
+                tensor_shape: None,
+                tensor_dtype: DataType::F32,
+            })
+            .unwrap();
 
-        graph.add_edge(GraphEdge {
-            from_node: id_c,
-            to_node: id_a,
-            tensor_name: "c_out".to_string(),
-            tensor_shape: None,
-            tensor_dtype: DataType::F32,
-        }).unwrap();
+        graph
+            .add_edge(GraphEdge {
+                from_node: id_c,
+                to_node: id_a,
+                tensor_name: "c_out".to_string(),
+                tensor_shape: None,
+                tensor_dtype: DataType::F32,
+            })
+            .unwrap();
 
         // This should fail validation due to the cycle
         assert!(graph.validate().is_err());

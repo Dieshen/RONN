@@ -4,7 +4,7 @@
 //! configuration, and graceful cleanup.
 
 use crate::tensor::Tensor;
-use crate::types::{ModelGraph, SessionId, ProviderId, OptimizationLevel};
+use crate::types::{ModelGraph, OptimizationLevel, ProviderId, SessionId};
 use anyhow::{anyhow, Result};
 use dashmap::DashMap;
 use std::collections::HashMap;
@@ -192,7 +192,11 @@ impl InferenceSession {
 
         if let Some(memory_limit) = self.config.memory_limit {
             if usage.current_memory > memory_limit {
-                return Err(anyhow!("Memory limit exceeded: {} > {}", usage.current_memory, memory_limit));
+                return Err(anyhow!(
+                    "Memory limit exceeded: {} > {}",
+                    usage.current_memory,
+                    memory_limit
+                ));
             }
         }
 
@@ -229,13 +233,19 @@ impl InferenceSession {
         tokio::time::sleep(Duration::from_millis(1)).await;
 
         // Create dummy outputs based on graph outputs
-        let outputs: Result<Vec<Tensor>> = self.model.outputs
+        let outputs: Result<Vec<Tensor>> = self
+            .model
+            .outputs
             .iter()
             .enumerate()
             .map(|(i, _output_name)| {
                 // Create a small output tensor as placeholder
-                Tensor::ones(vec![1, 10], crate::types::DataType::F32, crate::types::TensorLayout::RowMajor)
-                    .map_err(|e| anyhow!("Failed to create output tensor {}: {}", i, e))
+                Tensor::ones(
+                    vec![1, 10],
+                    crate::types::DataType::F32,
+                    crate::types::TensorLayout::RowMajor,
+                )
+                .map_err(|e| anyhow!("Failed to create output tensor {}: {}", i, e))
             })
             .collect();
 
@@ -255,13 +265,15 @@ impl InferenceSession {
                 stats.total_inference_time_ms as f64 / stats.total_inferences as f64;
 
             stats.min_inference_time_ms = Some(
-                stats.min_inference_time_ms
-                    .map_or(inference_time_ms, |min| min.min(inference_time_ms))
+                stats
+                    .min_inference_time_ms
+                    .map_or(inference_time_ms, |min| min.min(inference_time_ms)),
             );
 
             stats.max_inference_time_ms = Some(
-                stats.max_inference_time_ms
-                    .map_or(inference_time_ms, |max| max.max(inference_time_ms))
+                stats
+                    .max_inference_time_ms
+                    .map_or(inference_time_ms, |max| max.max(inference_time_ms)),
             );
         } else {
             stats.error_count += 1;
@@ -352,13 +364,17 @@ impl SessionManager {
                 self.cleanup_expired_sessions().await;
 
                 if self.sessions.len() >= max_sessions {
-                    return Err(anyhow!("Maximum number of sessions reached: {}", max_sessions));
+                    return Err(anyhow!(
+                        "Maximum number of sessions reached: {}",
+                        max_sessions
+                    ));
                 }
             }
         }
 
         // Validate model
-        model.validate()
+        model
+            .validate()
             .map_err(|e| anyhow!("Invalid model graph: {}", e))?;
 
         let session_config = config.unwrap_or_else(|| self.default_config.clone());
@@ -367,16 +383,20 @@ impl SessionManager {
 
         self.sessions.insert(session_id, session);
 
-        tracing::info!("Created session {} with {} nodes",
-                      session_id,
-                      self.sessions.get(&session_id).unwrap().model.nodes.len());
+        tracing::info!(
+            "Created session {} with {} nodes",
+            session_id,
+            self.sessions.get(&session_id).unwrap().model.nodes.len()
+        );
 
         Ok(session_id)
     }
 
     /// Get a session by ID.
     pub fn get_session(&self, session_id: SessionId) -> Option<Arc<InferenceSession>> {
-        self.sessions.get(&session_id).map(|entry| entry.value().clone())
+        self.sessions
+            .get(&session_id)
+            .map(|entry| entry.value().clone())
     }
 
     /// Run inference on a session.
@@ -385,7 +405,8 @@ impl SessionManager {
         session_id: SessionId,
         inputs: Vec<Tensor>,
     ) -> Result<Vec<Tensor>> {
-        let session = self.get_session(session_id)
+        let session = self
+            .get_session(session_id)
             .ok_or_else(|| anyhow!("Session not found: {}", session_id))?;
 
         if session.is_marked_for_deletion() {
@@ -419,7 +440,8 @@ impl SessionManager {
 
     /// Get session statistics.
     pub async fn get_session_statistics(&self, session_id: SessionId) -> Result<SessionStatistics> {
-        let session = self.get_session(session_id)
+        let session = self
+            .get_session(session_id)
             .ok_or_else(|| anyhow!("Session not found: {}", session_id))?;
 
         Ok(session.get_statistics().await)
@@ -440,7 +462,8 @@ impl SessionManager {
         let mut removed_count = 0;
         let max_age = Duration::from_secs(3600); // 1 hour
 
-        let expired_sessions: Vec<SessionId> = self.sessions
+        let expired_sessions: Vec<SessionId> = self
+            .sessions
             .iter()
             .filter_map(|entry| {
                 let session = entry.value();
@@ -488,7 +511,10 @@ impl SessionManager {
     pub async fn shutdown(&self) -> Result<()> {
         let session_ids: Vec<SessionId> = self.list_sessions();
 
-        tracing::info!("Shutting down session manager with {} active sessions", session_ids.len());
+        tracing::info!(
+            "Shutting down session manager with {} active sessions",
+            session_ids.len()
+        );
 
         for session_id in session_ids {
             if let Err(e) = self.destroy_session(session_id).await {
@@ -620,7 +646,9 @@ mod tests {
         let manager = Arc::new(SessionManager::with_config(None, None, config.clone()));
         let graph = create_test_graph();
 
-        let session_id = manager.create_session_with_config(graph, Some(config)).await?;
+        let session_id = manager
+            .create_session_with_config(graph, Some(config))
+            .await?;
 
         let input = Tensor::ones(vec![1, 3, 224, 224], DataType::F32, TensorLayout::RowMajor)?;
 
@@ -629,17 +657,21 @@ mod tests {
             .map(|_| {
                 let manager = Arc::clone(&manager);
                 let input = input.clone();
-                tokio::spawn(async move {
-                    manager.run_inference(session_id, vec![input]).await
-                })
+                tokio::spawn(async move { manager.run_inference(session_id, vec![input]).await })
             })
             .collect();
 
         let results: Vec<_> = futures::future::join_all(handles).await;
 
         // Some should succeed, some should fail due to concurrency limit
-        let successes = results.iter().filter(|r| r.as_ref().unwrap().is_ok()).count();
-        let failures = results.iter().filter(|r| r.as_ref().unwrap().is_err()).count();
+        let successes = results
+            .iter()
+            .filter(|r| r.as_ref().unwrap().is_ok())
+            .count();
+        let failures = results
+            .iter()
+            .filter(|r| r.as_ref().unwrap().is_err())
+            .count();
 
         assert!(successes > 0);
         assert!(failures > 0);
@@ -658,7 +690,9 @@ mod tests {
         let input = Tensor::ones(vec![1, 3, 224, 224], DataType::F32, TensorLayout::RowMajor)?;
 
         // Run inference on both sessions
-        manager.run_inference(session_id1, vec![input.clone()]).await?;
+        manager
+            .run_inference(session_id1, vec![input.clone()])
+            .await?;
         manager.run_inference(session_id2, vec![input]).await?;
 
         let global_stats = manager.get_global_statistics().await;

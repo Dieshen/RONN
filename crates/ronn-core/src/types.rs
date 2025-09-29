@@ -142,7 +142,10 @@ pub struct GraphEdge {
 /// Represents a compiled subgraph ready for execution.
 pub trait CompiledKernel: Send + Sync {
     /// Execute the kernel with the given inputs.
-    fn execute(&self, inputs: &[Tensor]) -> anyhow::Result<Vec<Tensor>>;
+    fn execute(
+        &self,
+        inputs: &[crate::tensor::Tensor],
+    ) -> anyhow::Result<Vec<crate::tensor::Tensor>>;
 
     /// Get memory usage statistics for this kernel.
     fn get_memory_usage(&self) -> MemoryUsage;
@@ -301,6 +304,11 @@ pub struct TensorBuffer {
     /// Type of memory.
     pub memory_type: MemoryType,
 }
+
+// SAFETY: TensorBuffer is used in controlled allocation contexts where
+// the pointer is valid and exclusive access is managed by the allocator
+unsafe impl Send for TensorBuffer {}
+unsafe impl Sync for TensorBuffer {}
 
 /// Memory allocator information.
 #[derive(Debug, Clone)]

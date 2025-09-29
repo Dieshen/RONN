@@ -235,7 +235,11 @@ impl Tensor {
     /// Clamp tensor values between min and max.
     pub fn clamp(&self, min: f32, max: f32) -> Result<Tensor> {
         if min > max {
-            return Err(anyhow!("Min value {} is greater than max value {}", min, max));
+            return Err(anyhow!(
+                "Min value {} is greater than max value {}",
+                min,
+                max
+            ));
         }
 
         let result_candle = self.candle_tensor().clamp(min as f64, max as f64)?;
@@ -299,8 +303,18 @@ mod tests {
 
     #[test]
     fn test_arithmetic_operations() -> Result<()> {
-        let a = Tensor::from_data(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2], DataType::F32, TensorLayout::RowMajor)?;
-        let b = Tensor::from_data(vec![2.0, 1.0, 1.0, 2.0], vec![2, 2], DataType::F32, TensorLayout::RowMajor)?;
+        let a = Tensor::from_data(
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
+        let b = Tensor::from_data(
+            vec![2.0, 1.0, 1.0, 2.0],
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         // Test addition
         let sum = a.add(&b)?;
@@ -327,7 +341,12 @@ mod tests {
 
     #[test]
     fn test_scalar_operations() -> Result<()> {
-        let a = Tensor::from_data(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2], DataType::F32, TensorLayout::RowMajor)?;
+        let a = Tensor::from_data(
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         // Test scalar addition
         let sum = a.add_scalar(5.0)?;
@@ -344,8 +363,18 @@ mod tests {
 
     #[test]
     fn test_broadcasting() -> Result<()> {
-        let a = Tensor::from_data(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3], DataType::F32, TensorLayout::RowMajor)?;
-        let b = Tensor::from_data(vec![10.0, 20.0, 30.0], vec![3], DataType::F32, TensorLayout::RowMajor)?;
+        let a = Tensor::from_data(
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            vec![2, 3],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
+        let b = Tensor::from_data(
+            vec![10.0, 20.0, 30.0],
+            vec![3],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         let sum = a.add(&b)?;
         let sum_data = sum.to_vec()?;
@@ -356,7 +385,12 @@ mod tests {
 
     #[test]
     fn test_activation_functions() -> Result<()> {
-        let a = Tensor::from_data(vec![-1.0, 0.0, 1.0, 2.0], vec![4], DataType::F32, TensorLayout::RowMajor)?;
+        let a = Tensor::from_data(
+            vec![-1.0, 0.0, 1.0, 2.0],
+            vec![4],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         // Test ReLU
         let relu_result = a.relu()?;
@@ -390,8 +424,20 @@ mod tests {
 
     #[test]
     fn test_error_handling() {
-        let a = Tensor::from_data(vec![1.0, 2.0], vec![2], DataType::F32, TensorLayout::RowMajor).unwrap();
-        let b = Tensor::from_data(vec![1.0, 2.0, 3.0], vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
+        let a = Tensor::from_data(
+            vec![1.0, 2.0],
+            vec![2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
+        let b = Tensor::from_data(
+            vec![1.0, 2.0, 3.0],
+            vec![3],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
 
         // Should fail because shapes are not broadcastable
         assert!(a.add(&b).is_err());

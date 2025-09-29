@@ -25,7 +25,6 @@
 //! ```
 
 #![deny(missing_docs)]
-#![deny(unsafe_code)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
@@ -39,13 +38,15 @@ pub mod types;
 // Re-export commonly used types
 pub use graph::{GraphBuilder, GraphStatistics};
 pub use ops::{ArithmeticOps, MatrixOps, ReductionOps, ShapeOps};
-pub use session::{SessionManager, SessionConfig, SessionStatistics, InferenceSession, GlobalStatistics};
+pub use session::{
+    GlobalStatistics, InferenceSession, SessionConfig, SessionManager, SessionStatistics,
+};
 pub use tensor::Tensor;
 pub use types::{
-    AttributeValue, CompiledKernel, DataType, ExecutionProvider, GraphEdge, GraphNode, MemoryType,
-    ModelGraph, NodeId, OperatorSpec, PerformanceProfile, ProviderId, ProviderCapability,
-    ProviderConfig, ResourceRequirements, SessionId, SubGraph, TensorAllocator,
-    TensorBuffer, TensorLayout,
+    AttributeValue, CompiledKernel, DataType, ExecutionProvider, GraphEdge, GraphNode, KernelStats,
+    MemoryInfo, MemoryType, MemoryUsage, ModelGraph, NodeId, OperatorSpec, OptimizationLevel,
+    PerformanceProfile, ProviderCapability, ProviderConfig, ProviderId, ResourceRequirements,
+    SessionId, SubGraph, TensorAllocator, TensorBuffer, TensorLayout,
 };
 
 /// Result type alias for core operations.

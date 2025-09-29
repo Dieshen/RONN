@@ -3,9 +3,9 @@
 //! This module provides matrix operations including matrix multiplication,
 //! transpose, and other linear algebra operations using the Candle backend.
 
-use crate::tensor::Tensor;
 use crate::ops::arithmetic::ArithmeticOps;
 use crate::ops::reduction::ReductionOps;
+use crate::tensor::Tensor;
 use anyhow::{anyhow, Result};
 
 /// Trait for matrix operations on tensors.
@@ -62,7 +62,10 @@ impl MatrixOps for Tensor {
     fn transpose(&self) -> Result<Tensor> {
         let shape = self.shape();
         if shape.len() < 2 {
-            return Err(anyhow!("Transpose requires at least 2D tensor, got shape {:?}", shape));
+            return Err(anyhow!(
+                "Transpose requires at least 2D tensor, got shape {:?}",
+                shape
+            ));
         }
 
         let dim1 = shape.len() - 2;
@@ -143,7 +146,10 @@ impl Tensor {
     pub fn diagonal(&self) -> Result<Tensor> {
         let shape = self.shape();
         if shape.len() < 2 {
-            return Err(anyhow!("Diagonal requires at least 2D tensor, got shape {:?}", shape));
+            return Err(anyhow!(
+                "Diagonal requires at least 2D tensor, got shape {:?}",
+                shape
+            ));
         }
 
         // For 2D matrices, manually extract diagonal elements
@@ -158,15 +164,26 @@ impl Tensor {
                 diag_data.push(data[i * cols + i]);
             }
 
-            return Ok(Tensor::from_data(diag_data, vec![min_dim], self.dtype(), self.layout())?);
+            return Ok(Tensor::from_data(
+                diag_data,
+                vec![min_dim],
+                self.dtype(),
+                self.layout(),
+            )?);
         }
 
         // For higher dimensions, this is more complex - placeholder implementation
-        Err(anyhow!("Diagonal extraction for >2D tensors not yet implemented"))
+        Err(anyhow!(
+            "Diagonal extraction for >2D tensors not yet implemented"
+        ))
     }
 
     /// Create an identity matrix of given size.
-    pub fn eye(size: usize, dtype: crate::types::DataType, layout: crate::types::TensorLayout) -> Result<Tensor> {
+    pub fn eye(
+        size: usize,
+        dtype: crate::types::DataType,
+        layout: crate::types::TensorLayout,
+    ) -> Result<Tensor> {
         use candle_core::Device;
 
         let device = Device::Cpu;
@@ -189,17 +206,31 @@ impl Tensor {
         match shape[0] {
             1 => {
                 let data = self.to_vec()?;
-                Ok(Tensor::from_data(vec![data[0]], vec![1], self.dtype(), self.layout())?)
+                Ok(Tensor::from_data(
+                    vec![data[0]],
+                    vec![1],
+                    self.dtype(),
+                    self.layout(),
+                )?)
             }
             2 => {
                 let data = self.to_vec()?;
                 let det = data[0] * data[3] - data[1] * data[2];
-                Ok(Tensor::from_data(vec![det], vec![1], self.dtype(), self.layout())?)
+                Ok(Tensor::from_data(
+                    vec![det],
+                    vec![1],
+                    self.dtype(),
+                    self.layout(),
+                )?)
             }
             _ => {
                 // For larger matrices, we'd need more complex algorithms like LU decomposition
                 // This is a placeholder implementation
-                Err(anyhow!("Determinant calculation for {}x{} matrices not yet implemented", shape[0], shape[1]))
+                Err(anyhow!(
+                    "Determinant calculation for {}x{} matrices not yet implemented",
+                    shape[0],
+                    shape[1]
+                ))
             }
         }
     }
@@ -217,7 +248,8 @@ impl Tensor {
         if shape[0] != 2 {
             return Err(anyhow!(
                 "Matrix inverse only implemented for 2x2 matrices, got {}x{}",
-                shape[0], shape[1]
+                shape[0],
+                shape[1]
             ));
         }
 
@@ -235,7 +267,12 @@ impl Tensor {
         let inv_det = 1.0 / det;
         let inv_data = vec![d * inv_det, -b * inv_det, -c * inv_det, a * inv_det];
 
-        Ok(Tensor::from_data(inv_data, vec![2, 2], self.dtype(), self.layout())?)
+        Ok(Tensor::from_data(
+            inv_data,
+            vec![2, 2],
+            self.dtype(),
+            self.layout(),
+        )?)
     }
 
     /// Compute the Frobenius norm of the tensor.
@@ -263,7 +300,10 @@ impl Tensor {
     pub fn diag_embed(&self) -> Result<Tensor> {
         let shape = self.shape();
         if shape.len() != 1 {
-            return Err(anyhow!("diag_embed requires a 1D tensor, got shape {:?}", shape));
+            return Err(anyhow!(
+                "diag_embed requires a 1D tensor, got shape {:?}",
+                shape
+            ));
         }
 
         let n = shape[0];
@@ -274,14 +314,19 @@ impl Tensor {
             diag_data[i * n + i] = data[i];
         }
 
-        Ok(Tensor::from_data(diag_data, vec![n, n], self.dtype(), self.layout())?)
+        Ok(Tensor::from_data(
+            diag_data,
+            vec![n, n],
+            self.dtype(),
+            self.layout(),
+        )?)
     }
 }
 
 /// Convert RONN DataType to Candle DType (helper function).
 fn dtype_to_candle(dtype: &crate::types::DataType) -> Result<candle_core::DType> {
-    use candle_core::DType;
     use crate::types::DataType;
+    use candle_core::DType;
 
     match dtype {
         DataType::F32 => Ok(DType::F32),
@@ -305,14 +350,14 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let b = Tensor::from_data(
             vec![2.0, 0.0, 1.0, 1.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let result = a.matmul(&b)?;
@@ -330,7 +375,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let transposed = a.transpose()?;
@@ -349,7 +394,10 @@ mod tests {
         let identity_data = identity.to_vec()?;
 
         assert_eq!(identity.shape(), vec![3, 3]);
-        assert_eq!(identity_data, vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]);
+        assert_eq!(
+            identity_data,
+            vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        );
 
         Ok(())
     }
@@ -360,7 +408,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let diag = a.diagonal()?;
@@ -377,7 +425,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let det = a.det()?;
@@ -395,7 +443,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let inv = a.inverse()?;
@@ -416,7 +464,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let trace = a.trace()?;
@@ -434,7 +482,7 @@ mod tests {
             vec![1.0, 2.0, 3.0],
             vec![3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let diag_matrix = a.diag_embed()?;
@@ -452,7 +500,7 @@ mod tests {
             vec![3.0, 4.0],
             vec![2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let norm = a.frobenius_norm()?;
@@ -468,17 +516,19 @@ mod tests {
     fn test_batch_matmul() -> Result<()> {
         // Create 2 batch matrices of size 2x3x2
         let a = Tensor::from_data(
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
+            vec![
+                1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
+            ],
             vec![2, 3, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let b = Tensor::from_data(
             vec![1.0, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0, 2.0],
             vec![2, 2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let result = a.batch_matmul(&b)?;
@@ -490,23 +540,53 @@ mod tests {
     #[test]
     fn test_error_handling() {
         // Test incompatible dimensions for matmul
-        let a = Tensor::from_data(vec![1.0, 2.0], vec![2], DataType::F32, TensorLayout::RowMajor).unwrap();
-        let b = Tensor::from_data(vec![1.0, 2.0, 3.0], vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
+        let a = Tensor::from_data(
+            vec![1.0, 2.0],
+            vec![2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
+        let b = Tensor::from_data(
+            vec![1.0, 2.0, 3.0],
+            vec![3],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
         assert!(a.matmul(&b).is_err());
 
         // Test transpose on 1D tensor
         assert!(a.transpose().is_err());
 
         // Test invalid transpose dimensions
-        let c = Tensor::from_data(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
+        let c = Tensor::from_data(
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
         assert!(c.transpose_dims(5, 6).is_err());
 
         // Test inverse on non-square matrix
-        let d = Tensor::from_data(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![2, 3], DataType::F32, TensorLayout::RowMajor).unwrap();
+        let d = Tensor::from_data(
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            vec![2, 3],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
         assert!(d.inverse().is_err());
 
         // Test singular matrix inverse
-        let singular = Tensor::from_data(vec![1.0, 2.0, 2.0, 4.0], vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
+        let singular = Tensor::from_data(
+            vec![1.0, 2.0, 2.0, 4.0],
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
+        .unwrap();
         assert!(singular.inverse().is_err());
     }
 }

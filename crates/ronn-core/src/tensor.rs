@@ -46,9 +46,7 @@ impl Tensor {
         let candle_shape = Shape::from_dims(&shape);
 
         let candle_tensor = match dtype {
-            DataType::F32 => {
-                CandleTensor::from_vec(data, candle_shape, &device)?
-            }
+            DataType::F32 => CandleTensor::from_vec(data, candle_shape, &device)?,
             DataType::F16 => {
                 let f16_data: Vec<half::f16> = data.into_iter().map(half::f16::from_f32).collect();
                 CandleTensor::from_vec(f16_data, candle_shape, &device)?
@@ -266,7 +264,13 @@ impl Tensor {
             match (d1, d2) {
                 (1, d) | (d, 1) => result.push(*d),
                 (d1, d2) if d1 == d2 => result.push(*d1),
-                (d1, d2) => return Err(anyhow!("Cannot broadcast shapes: dimension {} vs {}", d1, d2)),
+                (d1, d2) => {
+                    return Err(anyhow!(
+                        "Cannot broadcast shapes: dimension {} vs {}",
+                        d1,
+                        d2
+                    ))
+                }
             }
         }
         Ok(result)
@@ -327,7 +331,12 @@ mod tests {
     #[test]
     fn test_tensor_creation() -> Result<()> {
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let tensor = Tensor::from_data(data.clone(), vec![2, 2], DataType::F32, TensorLayout::RowMajor)?;
+        let tensor = Tensor::from_data(
+            data.clone(),
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         assert_eq!(tensor.shape(), vec![2, 2]);
         assert_eq!(tensor.dtype(), DataType::F32);
@@ -384,7 +393,12 @@ mod tests {
     fn test_data_type_conversions() -> Result<()> {
         // Test F16 conversion
         let data = vec![1.5, 2.5, 3.5, 4.5];
-        let tensor_f16 = Tensor::from_data(data.clone(), vec![2, 2], DataType::F16, TensorLayout::RowMajor)?;
+        let tensor_f16 = Tensor::from_data(
+            data.clone(),
+            vec![2, 2],
+            DataType::F16,
+            TensorLayout::RowMajor,
+        )?;
         let extracted_f16 = tensor_f16.to_vec()?;
 
         // F16 has limited precision, so we check with tolerance
@@ -394,7 +408,8 @@ mod tests {
 
         // Test I8 conversion
         let int_data = vec![1.0, -2.0, 3.0, -4.0];
-        let tensor_i8 = Tensor::from_data(int_data, vec![2, 2], DataType::I8, TensorLayout::RowMajor)?;
+        let tensor_i8 =
+            Tensor::from_data(int_data, vec![2, 2], DataType::I8, TensorLayout::RowMajor)?;
         let extracted_i8 = tensor_i8.to_vec()?;
         assert_eq!(extracted_i8, vec![1.0, -2.0, 3.0, -4.0]);
 
