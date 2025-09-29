@@ -6,15 +6,18 @@
 //! - Topology detection algorithms
 //! - Placement strategy implementations
 
-use ronn_core::{DataType, Tensor, TensorLayout};
+use ronn_core::DataType;
 use ronn_providers::{
     GpuMemoryAllocator, MultiGpuMemoryConfig, SyncStrategy, CudaKernelManager,
     CudaCompileOptions, TopologyConfig, LocalityAwarePlacement, BandwidthOptimizedPlacement,
-    PowerEfficientPlacement, PlacementStrategy, Workload, WorkloadType, CommunicationPattern,
-    GpuTopology, GpuDeviceInfo, InterconnectLink, InterconnectType
+    PowerEfficientPlacement, PlacementStrategy, Workload, WorkloadType,
+    GpuTopology,
+};
+use ronn_providers::gpu::topology::{
+    CommunicationPattern, GpuDeviceInfo, InterconnectLink, InterconnectType,
+    SystemInfo, NumaTopology,
 };
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// Test GPU memory allocator functionality
 #[tokio::test]

@@ -69,6 +69,19 @@ wide = "0.7"
 # Memory alignment (using libc for alignment functions)
 libc = "0.2"
 
+# BitNet support
+bitpacking = "0.8"
+
+# WebAssembly support
+wasm-bindgen = "0.2"
+web-sys = "0.3"
+js-sys = "0.3"
+getrandom = { version = "0.2", features = ["js"] }
+
+# Custom hardware provider support
+dlopen2 = "0.7"
+libloading = "0.8"
+
 [workspace.lints.rust]
 missing_docs = "warn"
 unused_imports = "warn"

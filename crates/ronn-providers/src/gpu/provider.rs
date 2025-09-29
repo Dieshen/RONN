@@ -1656,7 +1656,7 @@ mod tests {
     #[test]
     fn test_gpu_provider_config() {
         let config = GpuProviderConfig {
-            device_id: 0,
+            device_ids: vec![0],
             enable_mixed_precision: false,
             enable_tensor_cores: false,
             ..Default::default()

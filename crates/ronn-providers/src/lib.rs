@@ -52,6 +52,14 @@ pub mod cpu;
 pub mod gpu;
 pub mod registry;
 
+// Specialized execution providers
+#[cfg(feature = "bitnet")]
+pub mod bitnet;
+#[cfg(feature = "wasm")]
+pub mod wasm;
+#[cfg(feature = "custom-hardware")]
+pub mod custom;
+
 // Re-export commonly used types and functions
 pub use allocator::{
     calculate_tensor_size, get_alignment_requirement, get_simd_alignment, AlignedMemoryAllocator,
@@ -74,6 +82,23 @@ pub use gpu::{
     PlacementStrategy, LocalityAwarePlacement, BandwidthOptimizedPlacement, PowerEfficientPlacement,
 };
 pub use registry::{ProviderRegistry, RegistryStatistics};
+
+// Specialized provider re-exports
+#[cfg(feature = "bitnet")]
+pub use bitnet::{
+    BitNetExecutionProvider, BitNetProviderConfig, BitNetQuantizer, create_bitnet_provider,
+    BitNetKernel, BitNetOperation, QuantizationMethod, BinaryTensor, TernaryTensor,
+};
+#[cfg(feature = "wasm")]
+pub use wasm::{
+    WasmExecutionProvider, WasmProviderConfig, WasmBridge, create_wasm_provider,
+};
+#[cfg(feature = "custom-hardware")]
+pub use custom::{
+    CustomProviderRegistry, CustomHardwareProvider, HardwareCapability,
+    NpuProvider, NpuConfig, create_npu_provider,
+    TpuProvider, TpuConfig, create_tpu_provider,
+};
 
 /// Result type alias for provider operations.
 pub type Result<T> = anyhow::Result<T>;
@@ -106,6 +131,70 @@ pub fn create_cpu_only_system() -> Result<ProviderRegistry> {
     let cpu_provider = create_cpu_provider()?;
     registry.register_provider(cpu_provider)?;
     tracing::info!("Registered CPU-only provider system");
+    Ok(registry)
+}
+
+/// Create a comprehensive provider system with all available providers.
+///
+/// This includes CPU, GPU (if available), and all specialized providers
+/// (BitNet, WebAssembly, Custom Hardware) based on enabled features.
+pub fn create_comprehensive_provider_system() -> Result<ProviderRegistry> {
+    let registry = create_provider_system()?;
+
+    // Register BitNet provider if feature is enabled
+    #[cfg(feature = "bitnet")]
+    {
+        match create_bitnet_provider() {
+            Ok(bitnet_provider) => {
+                registry.register_provider(bitnet_provider)?;
+                tracing::info!("Registered BitNet provider for 1-bit quantized models");
+            }
+            Err(e) => {
+                tracing::warn!("BitNet provider registration failed: {}", e);
+            }
+        }
+    }
+
+    // Register WebAssembly provider if feature is enabled
+    #[cfg(feature = "wasm")]
+    {
+        match create_wasm_provider() {
+            Ok(wasm_provider) => {
+                registry.register_provider(wasm_provider)?;
+                tracing::info!("Registered WebAssembly provider for browser deployment");
+            }
+            Err(e) => {
+                tracing::warn!("WebAssembly provider registration failed: {}", e);
+            }
+        }
+    }
+
+    // Register custom hardware providers if feature is enabled
+    #[cfg(feature = "custom-hardware")]
+    {
+        // Register NPU provider
+        match create_npu_provider() {
+            Ok(npu_provider) => {
+                registry.register_provider(npu_provider)?;
+                tracing::info!("Registered NPU provider");
+            }
+            Err(e) => {
+                tracing::debug!("NPU provider registration failed: {}", e);
+            }
+        }
+
+        // Register TPU provider
+        match create_tpu_provider() {
+            Ok(tpu_provider) => {
+                registry.register_provider(tpu_provider)?;
+                tracing::info!("Registered TPU provider");
+            }
+            Err(e) => {
+                tracing::debug!("TPU provider registration failed: {}", e);
+            }
+        }
+    }
+
     Ok(registry)
 }
 
