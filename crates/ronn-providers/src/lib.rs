@@ -67,7 +67,11 @@ pub use cpu::{
     SimdCapabilities,
 };
 pub use gpu::{
-    create_gpu_provider, create_gpu_provider_with_config, GpuExecutionProvider, GpuMemoryAllocator,
+    create_gpu_provider, create_gpu_provider_with_config, CudaCompileOptions,
+    CudaKernelManager, GpuExecutionProvider, GpuMemoryAllocator,
+    MultiGpuMemoryConfig, MultiGpuMemoryManager, SyncStrategy,
+    GpuTopologyManager, TopologyConfig, GpuTopology, PlacementPlan, Workload, WorkloadType,
+    PlacementStrategy, LocalityAwarePlacement, BandwidthOptimizedPlacement, PowerEfficientPlacement,
 };
 pub use registry::{ProviderRegistry, RegistryStatistics};
 

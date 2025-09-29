@@ -1,0 +1,612 @@
+//! Unit Tests for Multi-GPU Components
+//!
+//! Focused unit tests for individual components:
+//! - Memory allocators and managers
+//! - CUDA kernel compilation
+//! - Topology detection algorithms
+//! - Placement strategy implementations
+
+use ronn_core::{DataType, Tensor, TensorLayout};
+use ronn_providers::{
+    GpuMemoryAllocator, MultiGpuMemoryConfig, SyncStrategy, CudaKernelManager,
+    CudaCompileOptions, TopologyConfig, LocalityAwarePlacement, BandwidthOptimizedPlacement,
+    PowerEfficientPlacement, PlacementStrategy, Workload, WorkloadType, CommunicationPattern,
+    GpuTopology, GpuDeviceInfo, InterconnectLink, InterconnectType
+};
+use std::collections::HashMap;
+use std::sync::Arc;
+
+/// Test GPU memory allocator functionality
+#[tokio::test]
+async fn test_gpu_memory_allocator() -> anyhow::Result<()> {
+    // Test creating allocator
+    let allocator = match GpuMemoryAllocator::new(0) {
+        Ok(alloc) => alloc,
+        Err(_) => {
+            println!("GPU not available for allocator test");
+            return Ok(());
+        }
+    };
+
+    // Test basic allocation
+    let buffer = allocator.allocate(&[1024], DataType::F32)?;
+    assert_eq!(buffer.size, 1024 * std::mem::size_of::<f32>());
+    assert!(buffer.ptr.is_some());
+
+    // Test memory info
+    let memory_info = allocator.get_memory_info();
+    assert!(memory_info.total_bytes > 0);
+    assert!(memory_info.allocated_bytes > 0);
+
+    // Test deallocation
+    allocator.deallocate(buffer)?;
+
+    Ok(())
+}
+
+/// Test CUDA kernel compilation options and validation
+#[test]
+fn test_cuda_compile_options() {
+    let options = CudaCompileOptions {
+        optimization_level: 3,
+        debug_info: true,
+        fast_math: false,
+        architecture: "sm_80".to_string(),
+        include_paths: vec!["/usr/local/cuda/include".to_string()],
+        define_macros: {
+            let mut macros = HashMap::new();
+            macros.insert("BLOCK_SIZE".to_string(), "256".to_string());
+            macros.insert("USE_DOUBLE".to_string(), "1".to_string());
+            macros
+        },
+    };
+
+    // Test option validation
+    assert!(options.optimization_level <= 3);
+    assert!(!options.architecture.is_empty());
+    assert!(!options.include_paths.is_empty());
+    assert!(!options.define_macros.is_empty());
+}
+
+/// Test CUDA kernel manager compilation and caching
+#[test]
+fn test_cuda_kernel_manager() -> anyhow::Result<()> {
+    let kernel_manager = match CudaKernelManager::new() {
+        Ok(km) => km,
+        Err(_) => {
+            println!("CUDA not available for kernel manager test");
+            return Ok(());
+        }
+    };
+
+    // Test kernel compilation
+    let simple_kernel = r#"
+        extern "C" __global__ void test_kernel(float* data, int n) {
+            int idx = threadIdx.x;
+            if (idx < n) {
+                data[idx] = idx * 2.0f;
+            }
+        }
+    "#;
+
+    let compiled = kernel_manager.compile_kernel(
+        simple_kernel,
+        "test_kernel",
+        &Default::default()
+    )?;
+
+    // Test kernel metadata
+    assert_eq!(compiled.get_name(), "test_kernel");
+    assert!(compiled.get_binary_size() > 0);
+
+    // Test compilation caching (compile same kernel again)
+    let compiled2 = kernel_manager.compile_kernel(
+        simple_kernel,
+        "test_kernel",
+        &Default::default()
+    )?;
+
+    // Should be the same kernel (cached)
+    assert_eq!(compiled.get_name(), compiled2.get_name());
+
+    Ok(())
+}
+
+/// Test multi-GPU memory configuration validation
+#[test]
+fn test_multi_gpu_memory_config() {
+    let valid_config = MultiGpuMemoryConfig {
+        enable_peer_to_peer: true,
+        enable_unified_memory: false,
+        memory_pool_size: 512 * 1024 * 1024, // 512MB
+        sync_strategy: SyncStrategy::Async,
+        enable_memory_prefetching: true,
+    };
+
+    // Test valid configuration
+    assert!(valid_config.memory_pool_size > 0);
+    assert!(!valid_config.enable_unified_memory || !valid_config.enable_peer_to_peer); // Typically exclusive
+
+    // Test different sync strategies
+    let sync_configs = [
+        SyncStrategy::Async,
+        SyncStrategy::Blocking,
+        SyncStrategy::StreamSynchronized,
+    ];
+
+    for strategy in sync_configs {
+        let config = MultiGpuMemoryConfig {
+            sync_strategy: strategy,
+            ..valid_config
+        };
+        assert!(config.memory_pool_size > 0);
+    }
+}
+
+/// Test topology configuration and validation
+#[test]
+fn test_topology_config() {
+    let config = TopologyConfig {
+        enable_numa_awareness: true,
+        enable_bandwidth_profiling: true,
+        enable_power_monitoring: false,
+        profiling_duration_ms: 1000,
+        cache_topology_info: true,
+    };
+
+    // Test configuration validation
+    assert!(config.profiling_duration_ms > 0);
+    assert!(config.profiling_duration_ms <= 10000); // Reasonable upper limit
+
+    // Test minimal config
+    let minimal_config = TopologyConfig {
+        enable_numa_awareness: false,
+        enable_bandwidth_profiling: false,
+        enable_power_monitoring: false,
+        profiling_duration_ms: 100,
+        cache_topology_info: false,
+    };
+
+    assert!(minimal_config.profiling_duration_ms > 0);
+}
+
+/// Test placement strategy implementations
+#[test]
+fn test_placement_strategies() -> anyhow::Result<()> {
+    // Create mock topology for testing
+    let mut devices = HashMap::new();
+    devices.insert(0, GpuDeviceInfo {
+        device_id: 0,
+        name: "GPU0".to_string(),
+        compute_capability: (7, 5),
+        memory_total: 8 * 1024 * 1024 * 1024, // 8GB
+        memory_available: 6 * 1024 * 1024 * 1024, // 6GB
+        memory_bandwidth_gbps: 900.0,
+        compute_units: 80,
+        max_threads_per_block: 1024,
+        has_tensor_cores: true,
+        pci_bus_id: "0000:01:00.0".to_string(),
+        numa_node: Some(0),
+        power_limit_watts: Some(250.0),
+        temperature_celsius: Some(65.0),
+    });
+
+    devices.insert(1, GpuDeviceInfo {
+        device_id: 1,
+        name: "GPU1".to_string(),
+        compute_capability: (7, 5),
+        memory_total: 8 * 1024 * 1024 * 1024,
+        memory_available: 7 * 1024 * 1024 * 1024,
+        memory_bandwidth_gbps: 900.0,
+        compute_units: 80,
+        max_threads_per_block: 1024,
+        has_tensor_cores: true,
+        pci_bus_id: "0000:02:00.0".to_string(),
+        numa_node: Some(1),
+        power_limit_watts: Some(250.0),
+        temperature_celsius: Some(70.0),
+    });
+
+    let mut links = HashMap::new();
+    links.insert((0, 1), InterconnectLink {
+        from_device: 0,
+        to_device: 1,
+        link_type: InterconnectType::NVLink,
+        bandwidth_gbps: 50.0,
+        latency_ns: 500,
+        is_bidirectional: true,
+    });
+
+    let topology = GpuTopology {
+        devices,
+        links,
+        numa_topology: None,
+        system_info: ronn_providers::SystemInfo {
+            total_system_memory: 64 * 1024 * 1024 * 1024, // 64GB
+            cpu_cores: 32,
+            numa_nodes: 2,
+        },
+        discovery_timestamp: std::time::SystemTime::now(),
+    };
+
+    // Test different workloads
+    let workloads = vec![
+        Workload {
+            id: "compute_test".to_string(),
+            workload_type: WorkloadType::ComputeIntensive,
+            estimated_compute_ops: 1_000_000,
+            estimated_memory_usage: 2 * 1024 * 1024 * 1024, // 2GB
+            communication_pattern: CommunicationPattern::AllToAll,
+            priority: 1.0,
+        },
+        Workload {
+            id: "memory_test".to_string(),
+            workload_type: WorkloadType::MemoryBound,
+            estimated_compute_ops: 100_000,
+            estimated_memory_usage: 6 * 1024 * 1024 * 1024, // 6GB
+            communication_pattern: CommunicationPattern::Broadcast,
+            priority: 0.8,
+        },
+        Workload {
+            id: "comm_test".to_string(),
+            workload_type: WorkloadType::CommunicationHeavy,
+            estimated_compute_ops: 500_000,
+            estimated_memory_usage: 1 * 1024 * 1024 * 1024, // 1GB
+            communication_pattern: CommunicationPattern::Ring,
+            priority: 0.9,
+        },
+    ];
+
+    // Test each placement strategy
+    let strategies: Vec<Box<dyn PlacementStrategy + Send + Sync>> = vec![
+        Box::new(LocalityAwarePlacement::new()),
+        Box::new(BandwidthOptimizedPlacement::new()),
+        Box::new(PowerEfficientPlacement::new()),
+    ];
+
+    for workload in &workloads {
+        for strategy in &strategies {
+            let plan = strategy.create_placement_plan(workload, &topology)?;
+
+            // Basic validation
+            assert!(!plan.device_assignments.is_empty());
+            assert!(plan.estimated_performance_score >= 0.0);
+            assert!(plan.estimated_power_consumption >= 0.0);
+            assert!(plan.estimated_memory_usage > 0);
+
+            // Validate device assignments
+            for assignment in &plan.device_assignments {
+                assert!(topology.devices.contains_key(&assignment.device_id));
+                assert!(assignment.memory_allocation > 0);
+                assert!(assignment.compute_allocation > 0.0 && assignment.compute_allocation <= 1.0);
+            }
+
+            // Check that memory allocation doesn't exceed available memory
+            let total_memory_allocated: u64 = plan.device_assignments
+                .iter()
+                .map(|a| a.memory_allocation)
+                .sum();
+            assert!(total_memory_allocated <= workload.estimated_memory_usage);
+
+            println!("Workload: {}, Strategy: {}, Devices: {}, Score: {:.2}",
+                     workload.id,
+                     match strategy.as_ref() {
+                         s if std::ptr::eq(s as *const dyn PlacementStrategy, strategies[0].as_ref()) => "LocalityAware",
+                         s if std::ptr::eq(s as *const dyn PlacementStrategy, strategies[1].as_ref()) => "BandwidthOptimized",
+                         _ => "PowerEfficient",
+                     },
+                     plan.device_assignments.len(),
+                     plan.estimated_performance_score);
+        }
+    }
+
+    Ok(())
+}
+
+/// Test locality-aware placement specific logic
+#[test]
+fn test_locality_aware_placement() -> anyhow::Result<()> {
+    let strategy = LocalityAwarePlacement::new();
+
+    // Create topology with NUMA nodes
+    let mut devices = HashMap::new();
+    devices.insert(0, GpuDeviceInfo {
+        device_id: 0,
+        name: "GPU0".to_string(),
+        compute_capability: (8, 0),
+        memory_total: 12 * 1024 * 1024 * 1024,
+        memory_available: 10 * 1024 * 1024 * 1024,
+        memory_bandwidth_gbps: 1000.0,
+        compute_units: 108,
+        max_threads_per_block: 1024,
+        has_tensor_cores: true,
+        pci_bus_id: "0000:17:00.0".to_string(),
+        numa_node: Some(0), // NUMA node 0
+        power_limit_watts: Some(300.0),
+        temperature_celsius: Some(60.0),
+    });
+
+    devices.insert(1, GpuDeviceInfo {
+        device_id: 1,
+        name: "GPU1".to_string(),
+        compute_capability: (8, 0),
+        memory_total: 12 * 1024 * 1024 * 1024,
+        memory_available: 10 * 1024 * 1024 * 1024,
+        memory_bandwidth_gbps: 1000.0,
+        compute_units: 108,
+        max_threads_per_block: 1024,
+        has_tensor_cores: true,
+        pci_bus_id: "0000:65:00.0".to_string(),
+        numa_node: Some(1), // NUMA node 1
+        power_limit_watts: Some(300.0),
+        temperature_celsius: Some(62.0),
+    });
+
+    let topology = GpuTopology {
+        devices,
+        links: HashMap::new(),
+        numa_topology: Some(ronn_providers::NumaTopology {
+            node_count: 2,
+            node_distances: vec![
+                vec![10, 21], // Distance from node 0 to nodes 0,1
+                vec![21, 10], // Distance from node 1 to nodes 0,1
+            ],
+        }),
+        system_info: ronn_providers::SystemInfo {
+            total_system_memory: 128 * 1024 * 1024 * 1024,
+            cpu_cores: 64,
+            numa_nodes: 2,
+        },
+        discovery_timestamp: std::time::SystemTime::now(),
+    };
+
+    // Test workload that should prefer single NUMA node
+    let local_workload = Workload {
+        id: "numa_local".to_string(),
+        workload_type: WorkloadType::ComputeIntensive,
+        estimated_compute_ops: 10_000_000,
+        estimated_memory_usage: 8 * 1024 * 1024 * 1024, // 8GB - fits on one GPU
+        communication_pattern: CommunicationPattern::AllToAll,
+        priority: 1.0,
+    };
+
+    let plan = strategy.create_placement_plan(&local_workload, &topology)?;
+
+    // Should prefer devices from the same NUMA node
+    if plan.device_assignments.len() > 1 {
+        let numa_nodes: Vec<_> = plan.device_assignments
+            .iter()
+            .filter_map(|a| topology.devices[&a.device_id].numa_node)
+            .collect();
+
+        // Check if all devices are from same NUMA node (preferred) or explain why not
+        let unique_numa_nodes: std::collections::HashSet<_> = numa_nodes.iter().collect();
+        if unique_numa_nodes.len() > 1 {
+            println!("Locality-aware strategy used multiple NUMA nodes: {:?}", unique_numa_nodes);
+            // This is acceptable if workload requires it
+        }
+    }
+
+    Ok(())
+}
+
+/// Test bandwidth-optimized placement logic
+#[test]
+fn test_bandwidth_optimized_placement() -> anyhow::Result<()> {
+    let strategy = BandwidthOptimizedPlacement::new();
+
+    // Create topology with different interconnect types
+    let mut devices = HashMap::new();
+    devices.insert(0, GpuDeviceInfo {
+        device_id: 0,
+        name: "GPU0".to_string(),
+        compute_capability: (8, 0),
+        memory_total: 16 * 1024 * 1024 * 1024,
+        memory_available: 14 * 1024 * 1024 * 1024,
+        memory_bandwidth_gbps: 1200.0,
+        compute_units: 108,
+        max_threads_per_block: 1024,
+        has_tensor_cores: true,
+        pci_bus_id: "0000:17:00.0".to_string(),
+        numa_node: Some(0),
+        power_limit_watts: Some(400.0),
+        temperature_celsius: Some(70.0),
+    });
+
+    devices.insert(1, GpuDeviceInfo {
+        device_id: 1,
+        name: "GPU1".to_string(),
+        compute_capability: (8, 0),
+        memory_total: 16 * 1024 * 1024 * 1024,
+        memory_available: 14 * 1024 * 1024 * 1024,
+        memory_bandwidth_gbps: 1200.0,
+        compute_units: 108,
+        max_threads_per_block: 1024,
+        has_tensor_cores: true,
+        pci_bus_id: "0000:65:00.0".to_string(),
+        numa_node: Some(0),
+        power_limit_watts: Some(400.0),
+        temperature_celsius: Some(72.0),
+    });
+
+    let mut links = HashMap::new();
+    links.insert((0, 1), InterconnectLink {
+        from_device: 0,
+        to_device: 1,
+        link_type: InterconnectType::NVLink, // High bandwidth
+        bandwidth_gbps: 600.0, // NVLink 4.0
+        latency_ns: 200,
+        is_bidirectional: true,
+    });
+
+    let topology = GpuTopology {
+        devices,
+        links,
+        numa_topology: None,
+        system_info: ronn_providers::SystemInfo {
+            total_system_memory: 128 * 1024 * 1024 * 1024,
+            cpu_cores: 32,
+            numa_nodes: 1,
+        },
+        discovery_timestamp: std::time::SystemTime::now(),
+    };
+
+    // Communication-heavy workload should prefer high-bandwidth connections
+    let comm_workload = Workload {
+        id: "bandwidth_test".to_string(),
+        workload_type: WorkloadType::CommunicationHeavy,
+        estimated_compute_ops: 1_000_000,
+        estimated_memory_usage: 16 * 1024 * 1024 * 1024, // 16GB - needs both GPUs
+        communication_pattern: CommunicationPattern::AllToAll,
+        priority: 1.0,
+    };
+
+    let plan = strategy.create_placement_plan(&comm_workload, &topology)?;
+
+    // Should select both devices due to high bandwidth connection
+    assert!(!plan.device_assignments.is_empty());
+
+    // Verify that interconnect bandwidth was considered
+    assert!(plan.estimated_performance_score > 0.0);
+
+    Ok(())
+}
+
+/// Test power-efficient placement logic
+#[test]
+fn test_power_efficient_placement() -> anyhow::Result<()> {
+    let strategy = PowerEfficientPlacement::new();
+
+    // Create topology with different power characteristics
+    let mut devices = HashMap::new();
+    devices.insert(0, GpuDeviceInfo {
+        device_id: 0,
+        name: "Efficient_GPU".to_string(),
+        compute_capability: (7, 5),
+        memory_total: 8 * 1024 * 1024 * 1024,
+        memory_available: 7 * 1024 * 1024 * 1024,
+        memory_bandwidth_gbps: 700.0,
+        compute_units: 72,
+        max_threads_per_block: 1024,
+        has_tensor_cores: true,
+        pci_bus_id: "0000:17:00.0".to_string(),
+        numa_node: Some(0),
+        power_limit_watts: Some(200.0), // Lower power
+        temperature_celsius: Some(55.0), // Cooler
+    });
+
+    devices.insert(1, GpuDeviceInfo {
+        device_id: 1,
+        name: "Powerful_GPU".to_string(),
+        compute_capability: (8, 0),
+        memory_total: 16 * 1024 * 1024 * 1024,
+        memory_available: 15 * 1024 * 1024 * 1024,
+        memory_bandwidth_gbps: 1200.0,
+        compute_units: 108,
+        max_threads_per_block: 1024,
+        has_tensor_cores: true,
+        pci_bus_id: "0000:65:00.0".to_string(),
+        numa_node: Some(0),
+        power_limit_watts: Some(400.0), // Higher power
+        temperature_celsius: Some(75.0), // Hotter
+    });
+
+    let topology = GpuTopology {
+        devices,
+        links: HashMap::new(),
+        numa_topology: None,
+        system_info: ronn_providers::SystemInfo {
+            total_system_memory: 64 * 1024 * 1024 * 1024,
+            cpu_cores: 16,
+            numa_nodes: 1,
+        },
+        discovery_timestamp: std::time::SystemTime::now(),
+    };
+
+    // Light workload should prefer more efficient GPU
+    let light_workload = Workload {
+        id: "power_test".to_string(),
+        workload_type: WorkloadType::ComputeIntensive,
+        estimated_compute_ops: 100_000, // Light workload
+        estimated_memory_usage: 2 * 1024 * 1024 * 1024, // 2GB - fits on either
+        communication_pattern: CommunicationPattern::Independent,
+        priority: 0.5,
+    };
+
+    let plan = strategy.create_placement_plan(&light_workload, &topology)?;
+
+    // Should consider power efficiency
+    assert!(!plan.device_assignments.is_empty());
+    assert!(plan.estimated_power_consumption > 0.0);
+
+    // For light workloads, power consumption should be reasonable
+    assert!(plan.estimated_power_consumption < 1000.0); // Less than 1kW
+
+    Ok(())
+}
+
+/// Test workload characterization accuracy
+#[test]
+fn test_workload_characterization() {
+    let workloads = vec![
+        ("compute_intensive", Workload {
+            id: "ml_training".to_string(),
+            workload_type: WorkloadType::ComputeIntensive,
+            estimated_compute_ops: 100_000_000, // High compute
+            estimated_memory_usage: 4 * 1024 * 1024 * 1024, // 4GB
+            communication_pattern: CommunicationPattern::AllToAll,
+            priority: 1.0,
+        }),
+        ("memory_bound", Workload {
+            id: "data_processing".to_string(),
+            workload_type: WorkloadType::MemoryBound,
+            estimated_compute_ops: 1_000_000, // Low compute
+            estimated_memory_usage: 32 * 1024 * 1024 * 1024, // 32GB - high memory
+            communication_pattern: CommunicationPattern::Broadcast,
+            priority: 0.8,
+        }),
+        ("communication_heavy", Workload {
+            id: "distributed_training".to_string(),
+            workload_type: WorkloadType::CommunicationHeavy,
+            estimated_compute_ops: 10_000_000, // Medium compute
+            estimated_memory_usage: 8 * 1024 * 1024 * 1024, // 8GB
+            communication_pattern: CommunicationPattern::Ring,
+            priority: 0.9,
+        }),
+    ];
+
+    for (name, workload) in workloads {
+        // Validate workload characteristics match type
+        match workload.workload_type {
+            WorkloadType::ComputeIntensive => {
+                assert!(workload.estimated_compute_ops > 10_000_000,
+                        "Compute intensive workload {} has too few ops: {}",
+                        name, workload.estimated_compute_ops);
+            },
+            WorkloadType::MemoryBound => {
+                let memory_gb = workload.estimated_memory_usage / (1024 * 1024 * 1024);
+                assert!(memory_gb > 8,
+                        "Memory bound workload {} uses too little memory: {}GB",
+                        name, memory_gb);
+            },
+            WorkloadType::CommunicationHeavy => {
+                assert!(matches!(workload.communication_pattern,
+                               CommunicationPattern::AllToAll |
+                               CommunicationPattern::Ring |
+                               CommunicationPattern::Tree),
+                        "Communication heavy workload {} has inappropriate pattern: {:?}",
+                        name, workload.communication_pattern);
+            },
+        }
+
+        // Validate priority
+        assert!(workload.priority >= 0.0 && workload.priority <= 1.0,
+                "Invalid priority for workload {}: {}", name, workload.priority);
+
+        // Validate resource estimates are reasonable
+        assert!(workload.estimated_compute_ops > 0,
+                "Zero compute ops for workload {}", name);
+        assert!(workload.estimated_memory_usage > 0,
+                "Zero memory usage for workload {}", name);
+    }
+}

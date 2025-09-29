@@ -4,9 +4,10 @@
 //! the Candle library's device abstraction.
 
 use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
-use candle_core::{Device, Tensor as CandleTensor};
+use candle_core::{Device, Tensor as CandleTensor, DType, Shape};
 use ronn_core::{DataType, MemoryInfo, MemoryType, TensorAllocator, TensorBuffer};
 use tracing::{debug, warn};
 
@@ -19,22 +20,47 @@ pub struct GpuMemoryAllocator {
     stats: Arc<Mutex<GpuMemoryStats>>,
     /// Memory pool for buffer reuse.
     memory_pool: Arc<Mutex<GpuMemoryPool>>,
+    /// Registry of active tensors by their ID.
+    tensor_registry: Arc<Mutex<HashMap<usize, CandleTensor>>>,
 }
 
+/// Statistics for GPU memory allocator performance tracking.
 #[derive(Debug, Default)]
-struct GpuMemoryStats {
-    allocated_bytes: usize,
-    peak_bytes: usize,
-    allocation_count: usize,
-    deallocation_count: usize,
+pub struct GpuMemoryStats {
+    /// Total bytes currently allocated on GPU.
+    pub allocated_bytes: usize,
+    /// Peak bytes allocated during session.
+    pub peak_bytes: usize,
+    /// Total number of allocation calls made.
+    pub allocation_count: usize,
+    /// Total number of deallocation calls made.
+    pub deallocation_count: usize,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct GpuMemoryPool {
-    // Simple pool implementation - in practice would be more sophisticated
-    cached_buffers: Vec<(usize, TensorBuffer)>, // (size, buffer) pairs
+    /// Cache of GPU tensors indexed by size for reuse.
+    cached_tensors: HashMap<usize, Vec<CandleTensor>>,
+    /// Cached buffer metadata for each tensor (by tensor id).
+    cached_buffers: HashMap<usize, TensorBuffer>,
+    /// Maximum total memory to cache in bytes.
     max_pool_size: usize,
+    /// Current memory usage in pool.
     current_pool_size: usize,
+    /// Next unique ID for tensors.
+    next_tensor_id: usize,
+}
+
+impl Default for GpuMemoryPool {
+    fn default() -> Self {
+        Self {
+            cached_tensors: HashMap::new(),
+            cached_buffers: HashMap::new(),
+            max_pool_size: 256 * 1024 * 1024, // 256MB
+            current_pool_size: 0,
+            next_tensor_id: 1,
+        }
+    }
 }
 
 impl GpuMemoryAllocator {
@@ -43,11 +69,8 @@ impl GpuMemoryAllocator {
         Self {
             device,
             stats: Arc::new(Mutex::new(GpuMemoryStats::default())),
-            memory_pool: Arc::new(Mutex::new(GpuMemoryPool {
-                cached_buffers: Vec::new(),
-                max_pool_size: 256 * 1024 * 1024, // 256MB pool
-                current_pool_size: 0,
-            })),
+            memory_pool: Arc::new(Mutex::new(GpuMemoryPool::default())),
+            tensor_registry: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -114,59 +137,84 @@ impl GpuMemoryAllocator {
         }
     }
 
-    /// Try to get a buffer from the memory pool.
-    fn try_get_from_pool(&self, size: usize) -> Option<TensorBuffer> {
+    /// Try to get a tensor and buffer from the memory pool.
+    fn try_get_from_pool(&self, size: usize) -> Option<(CandleTensor, TensorBuffer)> {
         let mut pool = self.memory_pool.lock().unwrap();
 
-        // Find a buffer of appropriate size
-        for i in 0..pool.cached_buffers.len() {
-            if pool.cached_buffers[i].0 >= size && pool.cached_buffers[i].0 <= size * 2 {
-                let (_, buffer) = pool.cached_buffers.swap_remove(i);
-                pool.current_pool_size -= buffer.size;
-                debug!("GPU pool hit: reusing buffer of size {} bytes", size);
-                return Some(buffer);
+        // Look for a cached tensor of appropriate size
+        for (&cached_size, tensors) in pool.cached_tensors.iter_mut() {
+            if cached_size >= size && cached_size <= size * 2 && !tensors.is_empty() {
+                // Found a suitable tensor
+                let tensor = tensors.pop().unwrap();
+                pool.current_pool_size -= cached_size;
+
+                // Create buffer metadata with unique ID
+                let tensor_id = pool.next_tensor_id;
+                pool.next_tensor_id += 1;
+
+                let buffer = TensorBuffer {
+                    ptr: tensor_id as *mut u8, // Use tensor ID as unique identifier
+                    size: cached_size,
+                    alignment: 256, // GPU memory alignment
+                    memory_type: MemoryType::DeviceMemory,
+                };
+
+                debug!("GPU pool hit: reusing tensor of size {} bytes", cached_size);
+                return Some((tensor, buffer));
             }
         }
 
         None
     }
 
-    /// Return a buffer to the memory pool.
-    fn return_to_pool(&self, buffer: TensorBuffer) -> bool {
+    /// Return a tensor to the memory pool.
+    fn return_tensor_to_pool(&self, tensor: CandleTensor, buffer: &TensorBuffer) -> bool {
         let mut pool = self.memory_pool.lock().unwrap();
 
         // Check if pool has space
         if pool.current_pool_size + buffer.size > pool.max_pool_size {
+            debug!("GPU pool full, deallocating tensor immediately");
             return false;
         }
 
-        let buffer_size = buffer.size;
-        pool.cached_buffers.push((buffer_size, buffer));
-        pool.current_pool_size += buffer_size;
-        debug!("Returned GPU buffer of size {} bytes to pool", buffer_size);
+        // Add tensor to appropriate size bucket
+        let size_key = buffer.size;
+        pool.cached_tensors
+            .entry(size_key)
+            .or_insert_with(Vec::new)
+            .push(tensor);
+
+        pool.current_pool_size += buffer.size;
+        debug!("Returned GPU tensor of size {} bytes to pool", buffer.size);
 
         true
     }
 
-    /// Allocate GPU memory using a dummy tensor approach.
-    fn allocate_gpu_memory(&self, size: usize, dtype: DataType) -> Result<TensorBuffer> {
+    /// Allocate GPU memory using Candle tensor.
+    fn allocate_gpu_memory(&self, size: usize, dtype: DataType) -> Result<(CandleTensor, TensorBuffer)> {
         let elements = size / self.element_size(dtype);
         let candle_dtype = self.dtype_to_candle(dtype);
 
-        // Create a dummy tensor to allocate GPU memory
+        // Create a Candle tensor on the GPU device
         let tensor = CandleTensor::zeros(&[elements], candle_dtype, &self.device)
             .map_err(|e| anyhow!("GPU memory allocation failed: {}", e))?;
 
-        // In a real implementation, we would extract the raw pointer
-        // For now, we'll simulate it with a null pointer and proper size
-        let ptr = std::ptr::null_mut(); // This would be the actual GPU pointer
+        // Generate unique tensor ID for tracking
+        let mut pool = self.memory_pool.lock().unwrap();
+        let tensor_id = pool.next_tensor_id;
+        pool.next_tensor_id += 1;
+        drop(pool);
 
-        Ok(TensorBuffer {
-            ptr,
+        // Create buffer metadata
+        let buffer = TensorBuffer {
+            ptr: tensor_id as *mut u8, // Use tensor ID as unique identifier
             size,
             alignment: 256, // GPU memory alignment is typically 256 bytes
             memory_type: MemoryType::DeviceMemory,
-        })
+        };
+
+        debug!("Allocated GPU tensor of size {} bytes", size);
+        Ok((tensor, buffer))
     }
 
     /// Get detailed GPU memory statistics.
@@ -183,16 +231,24 @@ impl GpuMemoryAllocator {
     /// Clear the memory pool.
     pub fn clear_pool(&self) {
         let mut pool = self.memory_pool.lock().unwrap();
+        pool.cached_tensors.clear();
         pool.cached_buffers.clear();
         pool.current_pool_size = 0;
-        debug!("Cleared GPU memory pool");
+        drop(pool);
+
+        // Clear tensor registry
+        let mut registry = self.tensor_registry.lock().unwrap();
+        registry.clear();
+
+        debug!("Cleared GPU memory pool and tensor registry");
     }
 
     /// Get memory pool statistics.
     pub fn get_pool_stats(&self) -> (usize, usize, usize) {
         let pool = self.memory_pool.lock().unwrap();
+        let total_cached_tensors: usize = pool.cached_tensors.values().map(|v| v.len()).sum();
         (
-            pool.cached_buffers.len(),
+            total_cached_tensors,
             pool.current_pool_size,
             pool.max_pool_size,
         )
@@ -208,12 +264,25 @@ impl TensorAllocator for GpuMemoryAllocator {
         }
 
         // Try to get from pool first
-        if let Some(buffer) = self.try_get_from_pool(size) {
+        if let Some((tensor, buffer)) = self.try_get_from_pool(size) {
+            // Store tensor in registry
+            let tensor_id = buffer.ptr as usize;
+            {
+                let mut registry = self.tensor_registry.lock().unwrap();
+                registry.insert(tensor_id, tensor);
+            }
             return Ok(buffer);
         }
 
         // Allocate new GPU memory
-        let buffer = self.allocate_gpu_memory(size, dtype)?;
+        let (tensor, buffer) = self.allocate_gpu_memory(size, dtype)?;
+
+        // Store tensor in registry
+        let tensor_id = buffer.ptr as usize;
+        {
+            let mut registry = self.tensor_registry.lock().unwrap();
+            registry.insert(tensor_id, tensor);
+        }
 
         // Update statistics
         {
@@ -238,19 +307,35 @@ impl TensorAllocator for GpuMemoryAllocator {
         }
 
         let buffer_size = buffer.size;
+        let tensor_id = buffer.ptr as usize;
 
-        // Try to return to pool
-        if self.return_to_pool(buffer) {
-            return Ok(());
+        // Retrieve tensor from registry
+        let tensor = {
+            let mut registry = self.tensor_registry.lock().unwrap();
+            registry.remove(&tensor_id)
+        };
+
+        if let Some(tensor) = tensor {
+            // Try to return tensor to pool
+            if self.return_tensor_to_pool(tensor, &buffer) {
+                debug!(
+                    "Returned {} bytes to GPU memory pool",
+                    buffer_size
+                );
+            } else {
+                // Pool is full, tensor will be dropped and GPU memory freed by Candle
+                debug!(
+                    "Deallocated {} bytes from GPU device: {} (pool full)",
+                    buffer_size,
+                    self.device_info()
+                );
+            }
+        } else {
+            warn!(
+                "Tensor ID {} not found in registry during deallocation",
+                tensor_id
+            );
         }
-
-        // Pool is full, deallocate immediately
-        // In a real implementation, we would free the GPU memory here
-        debug!(
-            "Deallocated {} bytes from GPU device: {}",
-            buffer_size,
-            self.device_info()
-        );
 
         // Update statistics
         {
@@ -309,6 +394,27 @@ pub fn create_gpu_allocator() -> Result<Arc<dyn TensorAllocator>> {
     }
 
     Err(anyhow!("No GPU devices available"))
+}
+
+/// Create a GPU memory allocator with the best available device.
+#[cfg(feature = "gpu")]
+pub fn create_gpu_allocator() -> Result<Arc<dyn TensorAllocator>> {
+    // Try CUDA first
+    if let Ok(device) = Device::new_cuda(0) {
+        return Ok(Arc::new(GpuMemoryAllocator::new(device)));
+    }
+
+    // Try Metal on macOS
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(device) = Device::new_metal(0) {
+            return Ok(Arc::new(GpuMemoryAllocator::new(device)));
+        }
+    }
+
+    // Fallback to CPU allocator if no GPU available
+    use crate::allocator::SystemMemoryAllocator;
+    Ok(Arc::new(SystemMemoryAllocator::new()))
 }
 
 /// Fallback for when GPU is not available.

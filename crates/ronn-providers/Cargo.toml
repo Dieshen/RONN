@@ -30,6 +30,12 @@ thiserror.workspace = true
 # Logging
 tracing.workspace = true
 
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+
+# Random number generation
+fastrand = "2.0"
+
 # Concurrency
 dashmap.workspace = true
 
@@ -46,12 +52,18 @@ num_cpus = "1.16"
 [dev-dependencies]
 criterion.workspace = true
 proptest.workspace = true
+futures = "0.3"
 
 [features]
 default = ["cpu"]
 cpu = []
 gpu = ["candle-core/cuda"]
 webasm = []
+
+# Benchmark configuration
+[[bench]]
+name = "multi_gpu_benchmarks"
+harness = false
 
 [lints]
 workspace = true
