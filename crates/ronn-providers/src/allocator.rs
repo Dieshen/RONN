@@ -47,13 +47,19 @@ pub struct SystemMemoryAllocator {
     stats: Arc<Mutex<AllocatorStats>>,
 }
 
-#[derive(Debug, Default)]
-struct AllocatorStats {
-    total_allocated: usize,
-    current_allocated: usize,
-    peak_allocated: usize,
-    allocation_count: usize,
-    deallocation_count: usize,
+/// Memory allocator statistics.
+#[derive(Debug, Default, Clone)]
+pub struct AllocatorStats {
+    /// Total bytes allocated.
+    pub total_allocated: usize,
+    /// Currently allocated bytes.
+    pub current_allocated: usize,
+    /// Peak allocated bytes.
+    pub peak_allocated: usize,
+    /// Number of allocations.
+    pub allocation_count: usize,
+    /// Number of deallocations.
+    pub deallocation_count: usize,
 }
 
 impl Default for SystemMemoryAllocator {
@@ -282,12 +288,17 @@ impl Default for PoolConfig {
     }
 }
 
-#[derive(Debug, Default)]
-struct PoolStats {
-    allocator_stats: AllocatorStats,
-    pool_hits: usize,
-    pool_misses: usize,
-    pool_size: usize,
+/// Statistics from pooled allocator.
+#[derive(Debug, Default, Clone)]
+pub struct PoolStats {
+    /// Allocator statistics.
+    pub allocator_stats: AllocatorStats,
+    /// Number of pool hits.
+    pub pool_hits: usize,
+    /// Number of pool misses.
+    pub pool_misses: usize,
+    /// Current pool size in bytes.
+    pub pool_size: usize,
 }
 
 impl PooledMemoryAllocator {

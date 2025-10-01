@@ -379,7 +379,7 @@ mod tests {
             TensorLayout::RowMajor,
         )?;
 
-        let transposed = a.transpose()?;
+        let transposed = MatrixOps::transpose(&a)?;
         let transposed_data = transposed.to_vec()?;
         assert_eq!(transposed.shape(), vec![3, 2]);
 
@@ -558,7 +558,7 @@ mod tests {
         assert!(a.matmul(&b).is_err());
 
         // Test transpose on 1D tensor
-        assert!(a.transpose().is_err());
+        assert!(MatrixOps::transpose(&a).is_err());
 
         // Test invalid transpose dimensions
         let c = Tensor::from_data(

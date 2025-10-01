@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(findstr:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(cargo test:*)",
+      "Bash(mkdir:*)",
+      "Bash(for test in tensor_matrix tensor_shape tensor_reduction session integration)",
+      "Bash(do echo \"=== Testing $test_tests ===\")",
+      "Bash(done)",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []

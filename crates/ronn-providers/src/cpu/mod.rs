@@ -12,6 +12,6 @@ pub use allocator::CpuMemoryAllocator;
 pub use kernels::CpuKernel;
 pub use provider::{
     create_cpu_provider, create_cpu_provider_with_config, create_numa_cpu_provider,
-    CpuExecutionProvider,
+    CpuExecutionProvider, CpuProviderConfig,
 };
 pub use simd::{detect_simd_capabilities, SimdCapabilities};

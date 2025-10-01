@@ -40,10 +40,9 @@ criterion.workspace = true
 proptest.workspace = true
 futures = "0.3"
 
-# Benchmarks will be added later
-# [[bench]]
-# name = "tensor_ops"
-# harness = false
+[[bench]]
+name = "tensor_benchmarks"
+harness = false
 
 [features]
 default = []
