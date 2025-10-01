@@ -29,6 +29,8 @@
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
 
+/// Error types for core operations
+pub mod error;
 pub mod graph;
 pub mod ops;
 pub mod session;
@@ -36,6 +38,7 @@ pub mod tensor;
 pub mod types;
 
 // Re-export commonly used types
+pub use error::{CoreError, Result};
 pub use graph::{GraphBuilder, GraphStatistics};
 pub use ops::{ArithmeticOps, MatrixOps, ReductionOps, ShapeOps};
 pub use session::{
@@ -44,10 +47,7 @@ pub use session::{
 pub use tensor::Tensor;
 pub use types::{
     AttributeValue, CompiledKernel, DataType, ExecutionProvider, GraphEdge, GraphNode, KernelStats,
-    MemoryInfo, MemoryType, MemoryUsage, ModelGraph, NodeId, OperatorSpec, OptimizationLevel,
-    PerformanceProfile, ProviderCapability, ProviderConfig, ProviderId, ResourceRequirements,
+    MemoryInfo, MemoryType, MemoryUsage, ModelGraph, NodeAttribute, NodeId, OperatorSpec, OptimizationLevel,
+    PerformanceProfile, ProviderCapability, ProviderConfig, ProviderId, ProviderType, ResourceRequirements,
     SessionId, SubGraph, TensorAllocator, TensorBuffer, TensorLayout,
 };
-
-/// Result type alias for core operations.
-pub type Result<T> = anyhow::Result<T>;

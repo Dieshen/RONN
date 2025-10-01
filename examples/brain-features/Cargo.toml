@@ -12,6 +12,10 @@ categories.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+ronn-api = { path = "../../crates/ronn-api" }
+ronn-core = { path = "../../crates/ronn-core" }
+ronn-providers = { path = "../../crates/ronn-providers" }
+tracing-subscriber = { workspace = true }
 
 [lints]
 workspace = true

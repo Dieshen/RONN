@@ -56,6 +56,32 @@ impl ModelGraph {
         self.nodes.get_mut(node_id)
     }
 
+    /// Get all nodes in the graph.
+    pub fn nodes(&self) -> &[GraphNode] {
+        &self.nodes
+    }
+
+    /// Get mutable access to all nodes.
+    pub fn nodes_mut(&mut self) -> &mut Vec<GraphNode> {
+        &mut self.nodes
+    }
+
+    /// Get the number of nodes in the graph.
+    pub fn node_count(&self) -> usize {
+        self.nodes.len()
+    }
+
+    /// Create a ModelGraph from a list of nodes.
+    pub fn from_nodes(nodes: Vec<GraphNode>) -> Self {
+        Self {
+            nodes,
+            edges: Vec::new(),
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            metadata: HashMap::new(),
+        }
+    }
+
     /// Find nodes by operation type.
     pub fn find_nodes_by_op(&self, op_type: &str) -> Vec<NodeId> {
         self.nodes

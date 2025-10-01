@@ -420,10 +420,10 @@ impl Tensor {
             .collect();
 
         // Create a zero tensor with the new shape
-        let mut padded = Tensor::zeros(new_shape, self.dtype(), self.layout())?;
+        let _padded = Tensor::zeros(new_shape, self.dtype(), self.layout())?;
 
         // Calculate slice ranges for placing the original tensor
-        let slice_ranges: Vec<(usize, usize)> = padding
+        let _slice_ranges: Vec<(usize, usize)> = padding
             .iter()
             .zip(shape.iter())
             .map(|(&(pad_before, _), &dim)| (pad_before, pad_before + dim))

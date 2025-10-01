@@ -16,8 +16,8 @@ pub fn calculate_tensor_size(shape: &[usize], dtype: DataType) -> usize {
     let element_count: usize = shape.iter().product();
     let element_size = match dtype {
         DataType::F32 | DataType::I32 | DataType::U32 => 4,
-        DataType::F16 => 2,
-        DataType::F64 => 8,
+        DataType::F16 | DataType::BF16 => 2,
+        DataType::F64 | DataType::I64 => 8,
         DataType::I8 | DataType::U8 | DataType::Bool => 1,
     };
     element_count * element_size
@@ -27,8 +27,8 @@ pub fn calculate_tensor_size(shape: &[usize], dtype: DataType) -> usize {
 pub fn get_alignment_requirement(dtype: DataType) -> usize {
     match dtype {
         DataType::F32 | DataType::I32 | DataType::U32 => 4,
-        DataType::F16 => 2,
-        DataType::F64 => 8,
+        DataType::F16 | DataType::BF16 => 2,
+        DataType::F64 | DataType::I64 => 8,
         DataType::I8 | DataType::U8 | DataType::Bool => 1,
     }
 }

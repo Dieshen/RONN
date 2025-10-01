@@ -58,13 +58,14 @@ impl WasmMemoryAllocator {
         let element_count: usize = shape.iter().product();
         let element_size = match dtype {
             DataType::F32 => std::mem::size_of::<f32>(),
-            DataType::F16 => std::mem::size_of::<u16>(),
+            DataType::F16 | DataType::BF16 => std::mem::size_of::<u16>(),
+            DataType::F64 => std::mem::size_of::<f64>(),
             DataType::U8 => std::mem::size_of::<u8>(),
             DataType::I8 => std::mem::size_of::<i8>(),
             DataType::I32 => std::mem::size_of::<i32>(),
+            DataType::I64 => std::mem::size_of::<i64>(),
             DataType::U32 => std::mem::size_of::<u32>(),
             DataType::Bool => std::mem::size_of::<u8>(), // Represented as u8 in WASM
-            _ => std::mem::size_of::<f32>(), // Default to f32
         };
 
         element_count * element_size
@@ -74,9 +75,9 @@ impl WasmMemoryAllocator {
     fn get_wasm_alignment(&self, dtype: DataType) -> usize {
         match dtype {
             DataType::F32 | DataType::I32 | DataType::U32 => 16, // 128-bit SIMD alignment
-            DataType::F16 => 8,                                   // Half precision
+            DataType::F16 | DataType::BF16 => 8,                                   // Half precision
+            DataType::F64 | DataType::I64 => 16,                 // 64-bit types
             DataType::U8 | DataType::I8 | DataType::Bool => 16,  // Byte types with SIMD
-            _ => 16,                                              // Default SIMD alignment
         }
     }
 

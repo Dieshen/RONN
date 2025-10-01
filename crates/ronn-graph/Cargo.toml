@@ -12,6 +12,21 @@ categories.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+ronn-core = { path = "../ronn-core" }
+
+# Data structures
+dashmap = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Serialization (for pass configuration)
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

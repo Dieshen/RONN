@@ -119,11 +119,12 @@ impl GpuMemoryAllocator {
         match dtype {
             DataType::F32 => candle_core::DType::F32,
             DataType::F16 => candle_core::DType::F16,
+            DataType::BF16 => candle_core::DType::BF16,
             DataType::F64 => candle_core::DType::F64,
             DataType::U8 => candle_core::DType::U8,
             DataType::U32 => candle_core::DType::U32,
             // Fallback for unsupported types
-            DataType::I8 | DataType::I32 | DataType::Bool => candle_core::DType::F32,
+            DataType::I8 | DataType::I32 | DataType::I64 | DataType::Bool => candle_core::DType::F32,
         }
     }
 
@@ -131,8 +132,8 @@ impl GpuMemoryAllocator {
     fn element_size(&self, dtype: DataType) -> usize {
         match dtype {
             DataType::F32 | DataType::I32 | DataType::U32 => 4,
-            DataType::F16 => 2,
-            DataType::F64 => 8,
+            DataType::F16 | DataType::BF16 => 2,
+            DataType::F64 | DataType::I64 => 8,
             DataType::I8 | DataType::U8 | DataType::Bool => 1,
         }
     }

@@ -347,9 +347,9 @@ impl Tensor {
         }
 
         // Create a mask for non-zero elements
-        let abs_values = self.abs()?;
+        let _abs_values = self.abs()?;
         let epsilon = 1e-7;
-        let epsilon_tensor =
+        let _epsilon_tensor =
             Tensor::from_data(vec![epsilon], vec![1], self.dtype(), self.layout())?;
 
         // This is a simplified implementation - in practice we'd need proper comparison operations

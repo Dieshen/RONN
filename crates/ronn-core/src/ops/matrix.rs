@@ -37,10 +37,10 @@ impl MatrixOps for Tensor {
             ));
         }
 
-        let self_rows = self_shape[self_shape.len() - 2];
+        let _self_rows = self_shape[self_shape.len() - 2];
         let self_cols = self_shape[self_shape.len() - 1];
         let other_rows = other_shape[other_shape.len() - 2];
-        let other_cols = other_shape[other_shape.len() - 1];
+        let _other_cols = other_shape[other_shape.len() - 1];
 
         if self_cols != other_rows {
             return Err(anyhow!(
@@ -331,11 +331,12 @@ fn dtype_to_candle(dtype: &crate::types::DataType) -> Result<candle_core::DType>
     match dtype {
         DataType::F32 => Ok(DType::F32),
         DataType::F16 => Ok(DType::F16),
+        DataType::BF16 => Ok(DType::BF16),
         DataType::F64 => Ok(DType::F64),
         DataType::U8 => Ok(DType::U8),
         DataType::U32 => Ok(DType::U32),
         // For unsupported types, use F32
-        DataType::I8 | DataType::I32 | DataType::Bool => Ok(DType::F32),
+        DataType::I8 | DataType::I32 | DataType::I64 | DataType::Bool => Ok(DType::F32),
     }
 }
 

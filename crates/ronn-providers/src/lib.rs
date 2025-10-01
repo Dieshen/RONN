@@ -83,6 +83,9 @@ pub use gpu::{
 };
 pub use registry::{ProviderRegistry, RegistryStatistics};
 
+// Re-export core types that providers use
+pub use ronn_core::{ExecutionProvider, ProviderType};
+
 // Specialized provider re-exports
 #[cfg(feature = "bitnet")]
 pub use bitnet::{

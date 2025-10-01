@@ -15,6 +15,7 @@ description = "Core runtime engine for RONN - fundamental tensor operations, dat
 [dependencies]
 # Core tensor operations
 candle-core.workspace = true
+candle-nn.workspace = true
 
 # Serialization
 serde.workspace = true

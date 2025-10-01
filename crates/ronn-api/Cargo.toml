@@ -12,6 +12,23 @@ categories.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+ronn-core = { path = "../ronn-core" }
+ronn-providers = { path = "../ronn-providers" }
+ronn-graph = { path = "../ronn-graph" }
+ronn-onnx = { path = "../ronn-onnx" }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Data structures
+dashmap = { workspace = true }
 
 [lints]
 workspace = true

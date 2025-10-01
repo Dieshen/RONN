@@ -48,11 +48,11 @@ impl BitNetMemoryAllocator {
                 // Use U8 to represent 2-bit ternary (4 elements per byte)
                 (element_count + 3) / 4 // Round up to nearest 4 elements
             }
-            DataType::F32 | DataType::F16 => {
+            DataType::F32 | DataType::F16 | DataType::BF16 => {
                 // Standard tensor allocation (for activations)
                 let element_size = match dtype {
                     DataType::F32 => std::mem::size_of::<f32>(),
-                    DataType::F16 => std::mem::size_of::<u16>(),
+                    DataType::F16 | DataType::BF16 => std::mem::size_of::<u16>(),
                     _ => unreachable!(),
                 };
                 element_count * element_size
@@ -66,7 +66,7 @@ impl BitNetMemoryAllocator {
         match dtype {
             DataType::Bool | DataType::U8 => 32, // 32-byte alignment for SIMD
             DataType::F32 => 32,                 // 32-byte alignment for AVX2
-            DataType::F16 => 16,                 // 16-byte alignment for SSE
+            DataType::F16 | DataType::BF16 => 16,                 // 16-byte alignment for SSE
             _ => 8,                              // Default alignment
         }
     }

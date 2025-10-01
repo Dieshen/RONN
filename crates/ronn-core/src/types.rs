@@ -13,6 +13,12 @@ pub type NodeId = usize;
 /// Unique identifier for inference sessions.
 pub type SessionId = Uuid;
 
+/// Alias for node attributes (same as AttributeValue)
+pub type NodeAttribute = AttributeValue;
+
+/// Alias for provider types (same as ProviderId)
+pub type ProviderType = ProviderId;
+
 /// Unique identifier for execution providers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ProviderId {
@@ -35,18 +41,22 @@ pub enum DataType {
     F32,
     /// 16-bit floating point.
     F16,
+    /// BFloat16 (Brain Floating Point).
+    BF16,
     /// 8-bit signed integer.
     I8,
-    /// Boolean values.
-    Bool,
-    /// 64-bit floating point (limited support).
-    F64,
     /// 32-bit signed integer.
     I32,
+    /// 64-bit signed integer.
+    I64,
     /// Unsigned 8-bit integer.
     U8,
     /// Unsigned 32-bit integer.
     U32,
+    /// Boolean values.
+    Bool,
+    /// 64-bit floating point (limited support).
+    F64,
 }
 
 /// Multi-dimensional tensor with shape and data type information.

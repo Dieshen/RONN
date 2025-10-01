@@ -1,14 +1,30 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+// ONNX compatibility layer for RONN runtime
+//
+// This crate provides ONNX model loading, operator support, and conversion
+// to the internal graph representation.
+
+mod error;
+mod loader;
+mod ops;
+mod proto;
+mod types;
+
+pub use error::{OnnxError, Result};
+pub use loader::{LoadedModel, ModelLoader};
+pub use ops::*;
+pub use types::*;
+
+// Simplified ONNX protobuf types (manual for MVP)
+pub use proto::*;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn test_type_conversion() {
+        let onnx_type = proto::tensor_proto::DataType::Float;
+        let ronn_type = DataTypeMapper::from_onnx(onnx_type as i32);
+        assert!(ronn_type.is_ok());
     }
 }

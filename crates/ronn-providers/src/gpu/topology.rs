@@ -723,7 +723,7 @@ impl GpuTopologyManager {
 
         let topology = self.topology.read().unwrap();
 
-        for (&(src, dst), link) in &topology.links {
+        for (&(src, dst), _link) in &topology.links {
             if src < dst { // Only benchmark each pair once
                 match self.benchmark_link(src, dst, &topology) {
                     Ok((bandwidth, latency)) => {

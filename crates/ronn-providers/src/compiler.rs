@@ -572,8 +572,8 @@ impl KernelCompiler {
         let element_count: usize = shape.iter().product();
         let element_size = match dtype {
             DataType::F32 | DataType::I32 | DataType::U32 => 4,
-            DataType::F16 => 2,
-            DataType::F64 => 8,
+            DataType::F16 | DataType::BF16 => 2,
+            DataType::F64 | DataType::I64 => 8,
             DataType::I8 | DataType::U8 | DataType::Bool => 1,
         };
         element_count * element_size
@@ -628,7 +628,7 @@ impl KernelCompiler {
     }
 
     /// Calculate memory reduction achieved.
-    fn calculate_memory_reduction(&self, subgraph: &SubGraph, memory_plan: &MemoryPlan) -> f32 {
+    fn calculate_memory_reduction(&self, _subgraph: &SubGraph, memory_plan: &MemoryPlan) -> f32 {
         // Estimate original memory usage (no reuse)
         let original_memory: usize = memory_plan.tensor_info.iter().map(|t| t.size_bytes).sum();
 

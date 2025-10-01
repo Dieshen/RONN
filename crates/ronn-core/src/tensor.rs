@@ -51,6 +51,10 @@ impl Tensor {
                 let f16_data: Vec<half::f16> = data.into_iter().map(half::f16::from_f32).collect();
                 CandleTensor::from_vec(f16_data, candle_shape, &device)?
             }
+            DataType::BF16 => {
+                let bf16_data: Vec<half::bf16> = data.into_iter().map(half::bf16::from_f32).collect();
+                CandleTensor::from_vec(bf16_data, candle_shape, &device)?
+            }
             DataType::F64 => {
                 let f64_data: Vec<f64> = data.into_iter().map(|x| x as f64).collect();
                 CandleTensor::from_vec(f64_data, candle_shape, &device)?
@@ -64,7 +68,7 @@ impl Tensor {
                 CandleTensor::from_vec(u32_data, candle_shape, &device)?
             }
             // For unsupported types, convert to F32
-            DataType::I8 | DataType::I32 | DataType::Bool => {
+            DataType::I8 | DataType::I32 | DataType::I64 | DataType::Bool => {
                 CandleTensor::from_vec(data, candle_shape, &device)?
             }
         };
@@ -193,12 +197,16 @@ impl Tensor {
         };
 
         match self.dtype {
-            DataType::F32 | DataType::I8 | DataType::I32 | DataType::Bool => {
+            DataType::F32 | DataType::I8 | DataType::I32 | DataType::I64 | DataType::Bool => {
                 let data: Vec<f32> = flattened.to_vec1()?;
                 Ok(data)
             }
             DataType::F16 => {
                 let data: Vec<half::f16> = flattened.to_vec1()?;
+                Ok(data.into_iter().map(|x| x.to_f32()).collect())
+            }
+            DataType::BF16 => {
+                let data: Vec<half::bf16> = flattened.to_vec1()?;
                 Ok(data.into_iter().map(|x| x.to_f32()).collect())
             }
             DataType::F64 => {
@@ -275,6 +283,89 @@ impl Tensor {
         }
         Ok(result)
     }
+
+    /// Convolution 2D operation (placeholder - uses Candle's conv2d).
+    pub fn conv2d(
+        &self,
+        weight: &Tensor,
+        bias: Option<&Tensor>,
+        strides: &[usize],
+        pads: &[usize],
+        dilations: &[usize],
+        groups: usize,
+    ) -> Result<Tensor> {
+        // Simplified implementation - full implementation would use candle_nn
+        let _ = (weight, bias, strides, pads, dilations, groups);
+        Err(anyhow!("conv2d not yet fully implemented"))
+    }
+
+    /// Max pooling 2D operation.
+    pub fn max_pool2d(
+        &self,
+        kernel_shape: &[usize],
+        strides: &[usize],
+        pads: &[usize],
+    ) -> Result<Tensor> {
+        let _ = (kernel_shape, strides, pads);
+        Err(anyhow!("max_pool2d not yet fully implemented"))
+    }
+
+    /// Average pooling 2D operation.
+    pub fn avg_pool2d(
+        &self,
+        kernel_shape: &[usize],
+        strides: &[usize],
+        pads: &[usize],
+    ) -> Result<Tensor> {
+        let _ = (kernel_shape, strides, pads);
+        Err(anyhow!("avg_pool2d not yet fully implemented"))
+    }
+
+    /// Batch normalization operation.
+    pub fn batch_norm(
+        &self,
+        scale: &Tensor,
+        bias: &Tensor,
+        mean: &Tensor,
+        var: &Tensor,
+        epsilon: f32,
+    ) -> Result<Tensor> {
+        let _ = (scale, bias, mean, var, epsilon);
+        Err(anyhow!("batch_norm not yet fully implemented"))
+    }
+
+    /// Get rank (number of dimensions).
+    pub fn rank(&self) -> usize {
+        self.ndim()
+    }
+
+    /// Convert to 1D vector (alias for to_vec).
+    pub fn to_vec1<T: candle_core::WithDType>(&self) -> Result<Vec<T>> {
+        let flattened = if self.candle_tensor.dims().len() > 1 {
+            self.candle_tensor.flatten_all()?
+        } else {
+            self.candle_tensor.clone()
+        };
+        Ok(flattened.to_vec1()?)
+    }
+
+    /// Split tensor along an axis.
+    pub fn split(&self, split_size: usize, dim: usize) -> Result<Vec<Tensor>> {
+        let _ = (split_size, dim);
+        Err(anyhow!("split not yet fully implemented"))
+    }
+
+    /// Gather elements along an axis.
+    pub fn gather(&self, indices: &Tensor, dim: usize) -> Result<Tensor> {
+        let _ = (indices, dim);
+        Err(anyhow!("gather not yet fully implemented"))
+    }
+
+    /// Transpose with specific permutation.
+    pub fn transpose(&self, perm: &[usize]) -> Result<Tensor> {
+        let result = self.candle_tensor.permute(perm)?;
+        Ok(Tensor::from_candle(result, self.dtype, self.layout))
+    }
 }
 
 /// Convert RONN DataType to Candle DType.
@@ -282,11 +373,12 @@ fn dtype_to_candle(dtype: &DataType) -> Result<DType> {
     match dtype {
         DataType::F32 => Ok(DType::F32),
         DataType::F16 => Ok(DType::F16),
+        DataType::BF16 => Ok(DType::BF16),
         DataType::F64 => Ok(DType::F64),
         DataType::U8 => Ok(DType::U8),
         DataType::U32 => Ok(DType::U32),
         // For unsupported types, use F32
-        DataType::I8 | DataType::I32 | DataType::Bool => Ok(DType::F32),
+        DataType::I8 | DataType::I32 | DataType::I64 | DataType::Bool => Ok(DType::F32),
     }
 }
 

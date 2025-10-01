@@ -293,7 +293,7 @@ impl MultiGpuManager {
     }
 
     /// Select device using a cost model that considers multiple factors.
-    fn select_device_by_cost_model(&self, op_type: &str, memory_requirement: usize) -> usize {
+    fn select_device_by_cost_model(&self, _op_type: &str, memory_requirement: usize) -> usize {
         let mut best_device = self.config.primary_device_id;
         let mut best_score = f64::INFINITY;
 
@@ -876,7 +876,7 @@ impl GpuExecutionProvider {
         tensor: &CandleTensor,
         target_device_id: usize,
     ) -> Result<CandleTensor> {
-        if let Some(ref memory_manager) = self.memory_manager {
+        if let Some(ref _memory_manager) = self.memory_manager {
             // Use advanced memory manager for optimal transfers
             info!("Using multi-GPU memory manager for tensor transfer to device {}", target_device_id);
 
@@ -1264,7 +1264,7 @@ impl GpuKernel {
 
                 // Expand dimensions if needed for broadcasting
                 let input_dims = input.dims();
-                let batch_size = input_dims[0];
+                let _batch_size = input_dims[0];
                 let channels = input_dims[1];
 
                 // Reshape scale, bias, mean, var for broadcasting
