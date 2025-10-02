@@ -8,7 +8,8 @@ members = [
     "crates/ronn-learning",
     "crates/ronn-onnx",
     "crates/ronn-api",
-    "examples/*"
+    "examples/*",
+    "tests/integration"
 ]
 resolver = "2"
 
@@ -96,6 +97,67 @@ cargo = "warn"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 module_name_repetitions = "allow"
+
+# Root-level package for benchmarks
+[package]
+name = "ronn-benchmarks"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# Workspace crates
+ronn-api = { path = "crates/ronn-api" }
+ronn-core = { path = "crates/ronn-core" }
+ronn-graph = { path = "crates/ronn-graph" }
+ronn-providers = { path = "crates/ronn-providers" }
+ronn-onnx = { path = "crates/ronn-onnx" }
+
+# Benchmarking
+criterion = { workspace = true }
+
+# Optional comparative dependencies
+onnxruntime = { version = "0.0.14", optional = true }
+ndarray = { version = "0.15", optional = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Utilities
+futures = "0.3"
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[features]
+default = []
+# Enable comparative benchmarks against ONNX Runtime
+comparative = ["onnxruntime", "ndarray"]
+
+# Benchmark definitions
+[[bench]]
+name = "end_to_end_simple"
+harness = false
+
+# Full benchmarks (require API fixes)
+# [[bench]]
+# name = "end_to_end"
+# harness = false
+
+# [[bench]]
+# name = "comparative"
+# harness = false
+# required-features = ["comparative"]
+
+# [[bench]]
+# name = "integration"
+# harness = false
+
+# [[bench]]
+# name = "regression"
+# harness = false
 
 [profile.dev]
 # Fast compilation for development

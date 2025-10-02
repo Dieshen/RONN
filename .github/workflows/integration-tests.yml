@@ -1,0 +1,168 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  # Allow manual triggering
+  workflow_dispatch:
+  # Run nightly for comprehensive testing
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  integration-tests:
+    name: Integration Tests - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Cache ONNX models
+      uses: actions/cache@v4
+      with:
+        path: models/*.onnx
+        key: onnx-models-v1
+        restore-keys: |
+          onnx-models-
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install onnx numpy
+
+    - name: Download ONNX models
+      working-directory: models
+      run: python download_models.py
+
+    - name: Export transformer models (optional)
+      working-directory: models
+      continue-on-error: true
+      run: |
+        pip install transformers torch onnx || true
+        python export_distilbert.py || echo "DistilBERT export skipped"
+        python export_gpt2.py || echo "GPT-2 export skipped"
+
+    - name: Build integration tests
+      run: cargo build -p ronn-integration-tests --verbose
+
+    - name: Run integration tests
+      run: cargo test -p ronn-integration-tests --verbose -- --include-ignored --nocapture
+      timeout-minutes: 30
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results-${{ matrix.os }}
+        path: |
+          target/debug/
+          tests/fixtures/expected_outputs/
+
+  integration-tests-quick:
+    name: Quick Integration Tests (ResNet only)
+    runs-on: ubuntu-latest
+    # Run on every PR for quick feedback
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Cache models
+      uses: actions/cache@v4
+      with:
+        path: models/*.onnx
+        key: onnx-models-v1
+
+    - name: Download ResNet-18 only
+      working-directory: models
+      run: |
+        pip install onnx numpy
+        python download_models.py
+
+    - name: Run ResNet integration tests
+      run: cargo test -p ronn-integration-tests test_resnet -- --include-ignored
+      timeout-minutes: 10
+
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    # Only run on main branch and schedule
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Cache models
+      uses: actions/cache@v4
+      with:
+        path: models/*.onnx
+        key: onnx-models-v1
+
+    - name: Download models
+      working-directory: models
+      run: |
+        pip install onnx numpy
+        python download_models.py
+
+    - name: Run performance benchmarks
+      run: cargo test -p ronn-integration-tests performance -- --include-ignored --nocapture
+      timeout-minutes: 20
+
+    - name: Store benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results
+        path: target/criterion/

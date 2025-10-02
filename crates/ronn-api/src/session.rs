@@ -142,16 +142,23 @@ impl InferenceSession {
     /// # Example
     /// ```no_run
     /// use ronn_api::{Model, Tensor};
+    /// use ronn_core::{DataType, TensorLayout};
     /// use std::collections::HashMap;
     ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let model = Model::load("model.onnx")?;
     /// let session = model.create_session_default()?;
     ///
     /// let mut inputs = HashMap::new();
-    /// inputs.insert("input", Tensor::zeros(&[1, 3, 224, 224])?);
+    /// inputs.insert("input", Tensor::zeros(
+    ///     vec![1, 3, 224, 224],
+    ///     DataType::F32,
+    ///     TensorLayout::RowMajor
+    /// )?);
     ///
     /// let outputs = session.run(inputs)?;
-    /// # Ok::<(), ronn_api::Error>(())
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn run(&self, inputs: HashMap<&str, Tensor>) -> Result<HashMap<String, Tensor>> {
         debug!("Running inference with {} inputs", inputs.len());

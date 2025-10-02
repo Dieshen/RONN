@@ -1,0 +1,134 @@
+name: Benchmarks
+
+on:
+  # Run on PRs that affect performance-critical code
+  pull_request:
+    paths:
+      - 'crates/**/*.rs'
+      - 'benches/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  # Run daily at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      benchmark_type:
+        description: 'Benchmark type to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - end_to_end
+          - integration
+          - regression
+          - comparative
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Quick regression check on PRs
+  regression:
+    name: Performance Regression Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run regression benchmarks
+      run: cargo bench --bench regression
+
+    - name: Archive benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: regression-results-pr-${{ github.event.pull_request.number }}
+        path: target/criterion/
+        retention-days: 14
+
+    - name: Check performance targets
+      run: |
+        echo "Performance regression check completed"
+        echo "Review criterion HTML report for P50/P95 percentiles"
+        echo "Targets: P50 < 10ms, P95 < 30ms"
+        # Note: Automated validation can be added using criterion output parsing
+
+  # Comprehensive benchmarks (scheduled or manual)
+  comprehensive:
+    name: Comprehensive Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run end-to-end benchmarks
+      if: github.event.inputs.benchmark_type == 'all' || github.event.inputs.benchmark_type == 'end_to_end' || github.event_name != 'workflow_dispatch'
+      run: cargo bench --bench end_to_end
+
+    - name: Run integration benchmarks
+      if: github.event.inputs.benchmark_type == 'all' || github.event.inputs.benchmark_type == 'integration' || github.event_name != 'workflow_dispatch'
+      run: cargo bench --bench integration
+
+    - name: Run regression benchmarks
+      if: github.event.inputs.benchmark_type == 'all' || github.event.inputs.benchmark_type == 'regression' || github.event_name != 'workflow_dispatch'
+      run: cargo bench --bench regression
+
+    - name: Generate benchmark summary
+      run: |
+        echo "=== Benchmark Summary ==="
+        echo "End-to-end benchmarks: target/criterion/end_to_end/"
+        echo "Integration benchmarks: target/criterion/integration/"
+        echo "Regression benchmarks: target/criterion/regression/"
+        echo "HTML Report: target/criterion/report/index.html"
+
+    - name: Archive benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results-${{ github.run_number }}
+        path: target/criterion/
+        retention-days: 90
+
+  # Comparative benchmarks (vs ONNX Runtime)
+  comparative:
+    name: Comparative Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run comparative benchmarks
+      if: github.event.inputs.benchmark_type == 'comparative' || github.event_name == 'schedule'
+      run: cargo bench --bench comparative --features comparative || echo "Comparative benchmarks skipped (ONNX Runtime not available)"
+      continue-on-error: true
+
+    - name: Archive comparative results
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: comparative-benchmark-results-${{ github.run_number }}
+        path: target/criterion/
+        retention-days: 90

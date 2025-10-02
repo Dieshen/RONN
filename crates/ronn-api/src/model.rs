@@ -70,7 +70,7 @@ impl Model {
     /// let model = Model::load("model.onnx")?;
     /// let options = SessionOptions::new()
     ///     .with_optimization_level(OptimizationLevel::O3)
-    ///     .with_provider(ProviderType::Gpu);
+    ///     .with_provider(ProviderType::GPU);
     /// let session = model.create_session(options)?;
     /// # Ok::<(), ronn_api::Error>(())
     /// ```

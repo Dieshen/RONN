@@ -4,6 +4,7 @@
 // to the internal graph representation.
 
 mod error;
+mod generated;
 mod loader;
 mod ops;
 mod proto;
@@ -14,7 +15,12 @@ pub use loader::{LoadedModel, ModelLoader};
 pub use ops::*;
 pub use types::*;
 
-// Simplified ONNX protobuf types (manual for MVP)
+// Generated ONNX protobuf types (via prost)
+pub mod onnx_proto {
+    pub use crate::generated::*;
+}
+
+// Simplified ONNX protobuf types (manual, for backward compatibility)
 pub use proto::*;
 
 #[cfg(test)]

@@ -1,59 +1,53 @@
-# Rust build artifacts
+# Rust
 /target/
+**/*.rs.bk
+*.pdb
 Cargo.lock
 
-# IDE and editor files
-.vscode/
+# IDE
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
 
-# OS generated files
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
+
+# Test outputs
+*.prof
+*.gcda
+*.gcno
+
+# Large ONNX models (downloaded separately)
+models/*.onnx
+!models/README.md
+
+# Model export scripts output
+models/distilbert/
+models/gpt2/
+
+# Reference outputs (generated during testing)
+tests/fixtures/expected_outputs/*.npy
+tests/fixtures/expected_outputs/*.json
+!tests/fixtures/expected_outputs/README.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Documentation build
+docs/_build/
+site/
 
 # Temporary files
 *.tmp
-*.bak
-*.orig
-
-# Log files
 *.log
-
-# Benchmark results
-criterion-reports/
-
-# Coverage reports
-*.profraw
-lcov.info
-tarpaulin-report.html
-
-# Test artifacts
-tests/fixtures/generated/
-tests/temp/
-
-# Documentation build
-/docs/_build/
-
-# Jupyter notebooks checkpoints
-.ipynb_checkpoints/
-
-# Python cache (if using Python bindings)
-__pycache__/
-*.pyc
-*.pyo
-
-# Node.js (if using WebAssembly bindings)
-node_modules/
-npm-debug.log
-
-# Environment files
-.env
-.env.local
-.env.*.local

@@ -2,15 +2,65 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
 jobs:
+  # Fast checks that fail quickly
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Check workspace
+      run: cargo check --workspace --all-features
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt
+
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run Clippy
+      run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
   test:
     name: Test Suite
     runs-on: ${{ matrix.os }}
@@ -32,25 +82,33 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        components: rustfmt, clippy
 
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
       with:
         key: ${{ matrix.os }}-${{ matrix.rust }}
 
-    - name: Check formatting
-      if: matrix.rust == 'stable' && matrix.os == 'ubuntu-latest'
-      run: cargo fmt --all -- --check
+    # Install Python for ONNX fixture generation
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
 
-    - name: Run Clippy
-      run: cargo clippy --workspace --all-targets ${{ matrix.features }} -- -D warnings
+    - name: Install Python dependencies
+      run: pip install onnx numpy
 
-    - name: Build
+    - name: Generate ONNX test fixtures
+      run: python crates/ronn-api/tests/fixtures/create_fixtures.py
+
+    - name: Build workspace
       run: cargo build --workspace ${{ matrix.features }}
 
-    - name: Run tests
+    - name: Run unit and integration tests
       run: cargo test --workspace ${{ matrix.features }}
+
+    - name: Run doc tests
+      run: cargo test --doc --workspace ${{ matrix.features }}
 
   coverage:
     name: Code Coverage

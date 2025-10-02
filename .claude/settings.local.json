@@ -3,12 +3,19 @@
     "allow": [
       "Bash(findstr:*)",
       "Bash(dir:*)",
+      "Bash(cargo:*)",
       "Bash(cargo test:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo check:*)",
       "Bash(mkdir:*)",
       "Bash(for test in tensor_matrix tensor_shape tensor_reduction session integration)",
       "Bash(do echo \"=== Testing $test_tests ===\")",
       "Bash(done)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "WebSearch",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

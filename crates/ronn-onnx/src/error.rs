@@ -7,6 +7,15 @@ pub enum OnnxError {
     #[error("Failed to parse ONNX model: {0}")]
     ParseError(String),
 
+    #[error("Protobuf decode error: {0}")]
+    ProtobufDecodeError(#[from] prost::DecodeError),
+
+    #[error("Unsupported ONNX IR version: {version}, expected >= {min_version}")]
+    UnsupportedIrVersion { version: i64, min_version: i64 },
+
+    #[error("Unsupported opset version: {version}")]
+    UnsupportedOpset { version: i64 },
+
     #[error("Unsupported operator: {op_type}")]
     UnsupportedOperator { op_type: String },
 

@@ -3,7 +3,8 @@
 A next-generation ML inference runtime written in pure Rust, combining high-performance ONNX compatibility with cognitive computing architectures.
 
 [![CI](https://github.com/your-org/ronn/workflows/CI/badge.svg)](https://github.com/your-org/ronn/actions)
-[![codecov](https://codecov.io/gh/your-org/ronn/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/ronn)
+[![Benchmarks](https://github.com/your-org/ronn/workflows/Benchmarks/badge.svg)](https://github.com/your-org/ronn/actions)
+[![codecov](https://codecov.io/gh/your-org/ronn/branch/master/graph/badge.svg)](https://codecov.io/gh/your-org/ronn)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Rust Version](https://img.shields.io/badge/rust-1.90.0%2B-orange.svg)](https://rustup.rs)
 
@@ -26,6 +27,7 @@ RONN is the **first Rust ML runtime with brain-inspired computing features**, co
 
 ```rust
 use ronn_api::prelude::*;
+use ronn_core::{DataType, TensorLayout};
 use std::collections::HashMap;
 
 // Load an ONNX model
@@ -35,12 +37,16 @@ let model = Model::load("model.onnx")?;
 let session = model.create_session(
     SessionOptions::new()
         .with_optimization_level(OptimizationLevel::O3)
-        .with_provider(ProviderType::Gpu)
+        .with_provider(ProviderType::GPU)
 )?;
 
 // Run inference
 let mut inputs = HashMap::new();
-inputs.insert("input", Tensor::zeros(&[1, 3, 224, 224])?);
+inputs.insert("input", Tensor::zeros(
+    vec![1, 3, 224, 224],
+    DataType::F32,
+    TensorLayout::RowMajor
+)?);
 let outputs = session.run(inputs)?;
 ```
 

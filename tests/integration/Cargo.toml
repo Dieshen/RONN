@@ -1,0 +1,30 @@
+[package]
+name = "ronn-integration-tests"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "integration"
+path = "lib.rs"
+
+[dependencies]
+# RONN crates under test
+ronn-api = { path = "../../crates/ronn-api" }
+ronn-core = { path = "../../crates/ronn-core" }
+ronn-graph = { path = "../../crates/ronn-graph" }
+ronn-onnx = { path = "../../crates/ronn-onnx" }
+ronn-providers = { path = "../../crates/ronn-providers" }
+
+[dev-dependencies]
+# Test utilities
+criterion = { workspace = true }
+proptest = { workspace = true }
+
+# Async runtime for tests
+tokio = { workspace = true }
+
+[features]
+default = []

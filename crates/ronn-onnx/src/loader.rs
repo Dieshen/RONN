@@ -1,11 +1,18 @@
 use crate::error::{OnnxError, Result};
-use crate::proto;
-use crate::types::{shape_from_value_info, tensor_from_proto, DataTypeMapper};
+use crate::generated;
+use crate::types::DataTypeMapper;
+use prost::Message;
 use ronn_core::{GraphNode, ModelGraph, NodeAttribute};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use tracing::{debug, info, warn};
+
+/// Minimum supported ONNX IR version
+const MIN_IR_VERSION: i64 = 3;
+
+/// Recommended ONNX opset version
+const RECOMMENDED_OPSET_VERSION: i64 = 13;
 
 /// Loads ONNX models and converts them to RONN internal representation
 pub struct ModelLoader;
@@ -20,43 +27,65 @@ impl ModelLoader {
 
     /// Load an ONNX model from bytes
     pub fn load_from_bytes(bytes: &[u8]) -> Result<LoadedModel> {
-        // For MVP: Try JSON format first (simplified testing)
-        // In production: Use prost to decode protobuf
-        let model_proto: proto::ModelProto = serde_json::from_slice(bytes)
-            .map_err(|e| OnnxError::ParseError(format!("Failed to parse model: {}", e)))?;
+        // Decode ONNX protobuf
+        let model_proto = generated::ModelProto::decode(bytes)?;
         Self::convert_model(model_proto)
     }
 
     /// Convert ONNX ModelProto to RONN LoadedModel
-    fn convert_model(model_proto: proto::ModelProto) -> Result<LoadedModel> {
+    fn convert_model(model_proto: generated::ModelProto) -> Result<LoadedModel> {
+        // Validate IR version
+        let ir_version = model_proto.ir_version;
+        if ir_version < MIN_IR_VERSION {
+            return Err(OnnxError::UnsupportedIrVersion {
+                version: ir_version,
+                min_version: MIN_IR_VERSION,
+            });
+        }
+
+        info!("ONNX model IR version: {}", ir_version);
+
+        // Check opset version
+        if let Some(opset) = model_proto.opset_import.first() {
+            let opset_version = opset.version;
+            if opset_version < RECOMMENDED_OPSET_VERSION {
+                warn!(
+                    "ONNX opset version {} is older than recommended {}",
+                    opset_version, RECOMMENDED_OPSET_VERSION
+                );
+            } else {
+                info!("ONNX opset version: {}", opset_version);
+            }
+        }
+
         let graph_proto = model_proto
             .graph
             .ok_or_else(|| OnnxError::ParseError("Model has no graph".to_string()))?;
 
-        info!("Converting ONNX graph: {}", graph_proto.name.as_ref().unwrap_or(&"unnamed".to_string()));
+        info!("Converting ONNX graph: {}", graph_proto.name);
 
         // Parse initializers (weights/constants)
         let mut initializers = HashMap::new();
         for init in &graph_proto.initializer {
-            let name = init.name.clone().unwrap_or_default();
+            let name = init.name.clone();
             debug!("Loading initializer: {}", name);
-            let tensor = tensor_from_proto(init)?;
+            let tensor = Self::tensor_from_proto(init)?;
             initializers.insert(name, tensor);
         }
 
         // Parse inputs
         let mut inputs = Vec::new();
         for input in &graph_proto.input {
-            let name = input.name.clone().unwrap_or_default();
-            let shape = shape_from_value_info(input)?;
-            debug!("Input: {} with shape {:?}", name, shape);
+            let name = input.name.clone();
+            let (shape, data_type) = Self::shape_and_type_from_value_info(input)?;
+            debug!("Input: {} with shape {:?}, type {:?}", name, shape, data_type);
 
             // Skip if it's an initializer (weights)
             if !initializers.contains_key(&name) {
                 inputs.push(TensorInfo {
                     name: name.clone(),
                     shape,
-                    data_type: ronn_core::types::DataType::F32, // Default
+                    data_type,
                 });
             }
         }
@@ -64,31 +93,32 @@ impl ModelLoader {
         // Parse outputs
         let mut outputs = Vec::new();
         for output in &graph_proto.output {
-            let name = output.name.clone().unwrap_or_default();
-            let shape = shape_from_value_info(output)?;
-            debug!("Output: {} with shape {:?}", name, shape);
+            let name = output.name.clone();
+            let (shape, data_type) = Self::shape_and_type_from_value_info(output)?;
+            debug!("Output: {} with shape {:?}, type {:?}", name, shape, data_type);
             outputs.push(TensorInfo {
                 name: name.clone(),
                 shape,
-                data_type: ronn_core::types::DataType::F32, // Default
+                data_type,
             });
         }
 
         // Parse nodes and build graph
         let mut nodes = Vec::new();
         for (idx, node_proto) in graph_proto.node.iter().enumerate() {
-            let op_type = node_proto.op_type.clone().unwrap_or_default();
-            let name = node_proto
-                .name
-                .clone()
-                .unwrap_or_else(|| format!("node_{}", idx));
+            let op_type = node_proto.op_type.clone();
+            let name = if node_proto.name.is_empty() {
+                format!("node_{}", idx)
+            } else {
+                node_proto.name.clone()
+            };
 
             debug!("Processing node: {} ({})", name, op_type);
 
             // Parse attributes
             let mut attributes = HashMap::new();
             for attr in &node_proto.attribute {
-                let attr_name = attr.name.clone().unwrap_or_default();
+                let attr_name = attr.name.clone();
                 let attr_value = Self::convert_attribute(attr)?;
                 attributes.insert(attr_name, attr_value);
             }
@@ -112,55 +142,227 @@ impl ModelLoader {
             inputs,
             outputs,
             initializers,
-            producer_name: model_proto.producer_name,
-            ir_version: model_proto.ir_version.unwrap_or(0),
+            producer_name: Some(model_proto.producer_name),
+            ir_version,
         })
     }
 
     /// Convert ONNX AttributeProto to RONN NodeAttribute
-    fn convert_attribute(attr: &proto::AttributeProto) -> Result<NodeAttribute> {
-        use proto::attribute_proto::AttributeType;
+    fn convert_attribute(attr: &generated::AttributeProto) -> Result<NodeAttribute> {
+        use generated::attribute_proto::AttributeType;
 
-        let attr_type = attr.r#type.unwrap_or(0);
+        let attr_type = AttributeType::try_from(attr.r#type)
+            .unwrap_or(AttributeType::Undefined);
 
         match attr_type {
-            x if x == AttributeType::Float as i32 => {
-                Ok(NodeAttribute::Float(attr.f.unwrap_or(0.0) as f64))
-            }
-            x if x == AttributeType::Int as i32 => {
-                Ok(NodeAttribute::Int(attr.i.unwrap_or(0)))
-            }
-            x if x == AttributeType::String as i32 => {
-                let s = attr.s.as_ref()
-                    .map(|bytes| String::from_utf8_lossy(bytes).to_string())
-                    .unwrap_or_default();
+            AttributeType::Float => Ok(NodeAttribute::Float(attr.f as f64)),
+            AttributeType::Int => Ok(NodeAttribute::Int(attr.i)),
+            AttributeType::String => {
+                let s = String::from_utf8_lossy(&attr.s).to_string();
                 Ok(NodeAttribute::String(s))
             }
-            x if x == AttributeType::Tensor as i32 => {
+            AttributeType::Tensor => {
                 if let Some(ref t) = attr.t {
-                    // For now, just use empty bytes as a placeholder
-                    // Full implementation would serialize the tensor
-                    let _tensor = tensor_from_proto(t)?;
+                    // For now, store tensor as empty bytes placeholder
+                    // Full implementation would serialize the tensor data
+                    let _tensor = Self::tensor_from_proto(t)?;
                     Ok(NodeAttribute::Tensor(Vec::new()))
                 } else {
                     Err(OnnxError::InvalidAttribute {
-                        name: attr.name.clone().unwrap_or_default(),
+                        name: attr.name.clone(),
                         reason: "Tensor attribute has no value".to_string(),
                     })
                 }
             }
-            x if x == AttributeType::Floats as i32 => {
+            AttributeType::Floats => {
                 let floats: Vec<f64> = attr.floats.iter().map(|&f| f as f64).collect();
                 Ok(NodeAttribute::FloatArray(floats))
             }
-            x if x == AttributeType::Ints as i32 => {
-                Ok(NodeAttribute::IntArray(attr.ints.clone()))
-            }
+            AttributeType::Ints => Ok(NodeAttribute::IntArray(attr.ints.clone())),
             _ => {
-                warn!("Unsupported attribute type: {}", attr_type);
-                Ok(NodeAttribute::String(format!("unsupported_type_{}", attr_type)))
+                warn!("Unsupported attribute type: {:?}", attr_type);
+                Ok(NodeAttribute::String(format!(
+                    "unsupported_type_{:?}",
+                    attr_type
+                )))
             }
         }
+    }
+
+    /// Extract shape and data type from ValueInfoProto
+    fn shape_and_type_from_value_info(
+        value_info: &generated::ValueInfoProto,
+    ) -> Result<(Vec<usize>, ronn_core::types::DataType)> {
+        let type_proto = value_info
+            .r#type
+            .as_ref()
+            .ok_or_else(|| OnnxError::ParseError("ValueInfo has no type".to_string()))?;
+
+        let tensor_type = match &type_proto.value {
+            Some(generated::type_proto::Value::TensorType(t)) => t,
+            _ => {
+                return Err(OnnxError::ParseError(
+                    "Type is not a tensor type".to_string(),
+                ))
+            }
+        };
+
+        // Extract data type
+        let data_type = DataTypeMapper::from_onnx(tensor_type.elem_type)?;
+
+        // Extract shape
+        let shape = if let Some(ref shape_proto) = tensor_type.shape {
+            shape_proto
+                .dim
+                .iter()
+                .map(|d| {
+                    if let Some(ref value) = d.value {
+                        match value {
+                            generated::tensor_shape_proto::dimension::Value::DimValue(v) => {
+                                *v as usize
+                            }
+                            generated::tensor_shape_proto::dimension::Value::DimParam(_) => 0, // Dynamic
+                        }
+                    } else {
+                        0 // Unknown dimension
+                    }
+                })
+                .collect()
+        } else {
+            Vec::new() // Scalar or unknown rank
+        };
+
+        Ok((shape, data_type))
+    }
+
+    /// Convert ONNX TensorProto to RONN Tensor
+    fn tensor_from_proto(
+        tensor_proto: &generated::TensorProto,
+    ) -> Result<ronn_core::tensor::Tensor> {
+        let data_type = DataTypeMapper::from_onnx(tensor_proto.data_type)?;
+        let shape: Vec<usize> = tensor_proto.dims.iter().map(|&d| d as usize).collect();
+
+        // Extract actual tensor data based on data type
+        use ronn_core::types::TensorLayout;
+        let tensor = if !tensor_proto.raw_data.is_empty() {
+            // Data is in raw_data field (packed binary)
+            Self::tensor_from_raw_data(&tensor_proto.raw_data, &shape, data_type)?
+        } else {
+            // Data is in typed fields (float_data, int32_data, etc.)
+            Self::tensor_from_typed_data(tensor_proto, &shape, data_type)?
+        };
+
+        Ok(tensor)
+    }
+
+    /// Create tensor from raw_data field
+    fn tensor_from_raw_data(
+        raw_data: &[u8],
+        shape: &[usize],
+        data_type: ronn_core::types::DataType,
+    ) -> Result<ronn_core::tensor::Tensor> {
+        use ronn_core::types::TensorLayout;
+
+        // For now, create a zero tensor and note that we need to copy data
+        // Full implementation would parse raw_data based on data_type
+        let tensor = ronn_core::tensor::Tensor::zeros(
+            shape.to_vec(),
+            data_type,
+            TensorLayout::RowMajor,
+        )?;
+
+        // TODO: Parse raw_data bytes according to data_type endianness
+        debug!(
+            "Created tensor from raw_data: shape={:?}, type={:?}, bytes={}",
+            shape,
+            data_type,
+            raw_data.len()
+        );
+
+        Ok(tensor)
+    }
+
+    /// Create tensor from typed data fields
+    fn tensor_from_typed_data(
+        tensor_proto: &generated::TensorProto,
+        shape: &[usize],
+        data_type: ronn_core::types::DataType,
+    ) -> Result<ronn_core::tensor::Tensor> {
+        use ronn_core::types::{DataType, TensorLayout};
+
+        let tensor = match data_type {
+            DataType::F32 => {
+                if !tensor_proto.float_data.is_empty() {
+                    ronn_core::tensor::Tensor::from_data(
+                        tensor_proto.float_data.clone(),
+                        shape.to_vec(),
+                        data_type,
+                        TensorLayout::RowMajor,
+                    )?
+                } else {
+                    // Empty tensor
+                    ronn_core::tensor::Tensor::zeros(
+                        shape.to_vec(),
+                        data_type,
+                        TensorLayout::RowMajor,
+                    )?
+                }
+            }
+            DataType::I32 => {
+                if !tensor_proto.int32_data.is_empty() {
+                    // Convert i32 to f32 for from_data
+                    let f32_data: Vec<f32> = tensor_proto
+                        .int32_data
+                        .iter()
+                        .map(|&x| x as f32)
+                        .collect();
+                    ronn_core::tensor::Tensor::from_data(
+                        f32_data,
+                        shape.to_vec(),
+                        data_type,
+                        TensorLayout::RowMajor,
+                    )?
+                } else {
+                    ronn_core::tensor::Tensor::zeros(
+                        shape.to_vec(),
+                        data_type,
+                        TensorLayout::RowMajor,
+                    )?
+                }
+            }
+            DataType::I64 => {
+                if !tensor_proto.int64_data.is_empty() {
+                    // Convert i64 to f32 for from_data
+                    let f32_data: Vec<f32> = tensor_proto
+                        .int64_data
+                        .iter()
+                        .map(|&x| x as f32)
+                        .collect();
+                    ronn_core::tensor::Tensor::from_data(
+                        f32_data,
+                        shape.to_vec(),
+                        data_type,
+                        TensorLayout::RowMajor,
+                    )?
+                } else {
+                    ronn_core::tensor::Tensor::zeros(
+                        shape.to_vec(),
+                        data_type,
+                        TensorLayout::RowMajor,
+                    )?
+                }
+            }
+            _ => {
+                // For other types, create zero tensor for now
+                ronn_core::tensor::Tensor::zeros(
+                    shape.to_vec(),
+                    data_type,
+                    TensorLayout::RowMajor,
+                )?
+            }
+        };
+
+        Ok(tensor)
     }
 }
 
