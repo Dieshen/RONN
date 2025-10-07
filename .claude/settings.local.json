@@ -10,7 +10,8 @@
       "Bash(cargo fmt:*)",
       "Bash(cargo clippy:*)",
       "Bash(cargo llvm-cov:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(gh run list:*)"
     ],
     "deny": [],
     "ask": []

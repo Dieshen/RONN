@@ -102,8 +102,9 @@ impl SessionBuilder {
         );
 
         // Initialize provider registry with available providers
-        let provider_registry = ronn_providers::create_provider_system()
-            .map_err(|e| Error::ProviderError(format!("Failed to create provider system: {}", e)))?;
+        let provider_registry = ronn_providers::create_provider_system().map_err(|e| {
+            Error::ProviderError(format!("Failed to create provider system: {}", e))
+        })?;
 
         // Get the requested provider
         let provider = provider_registry

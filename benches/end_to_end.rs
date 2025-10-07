@@ -24,7 +24,10 @@ fn create_test_input(shape: Vec<usize>) -> Tensor {
 
 /// Helper to get the first input name from a model
 fn get_first_input_name(model: &Model) -> &str {
-    model.input_names().first().expect("Model should have at least one input")
+    model
+        .input_names()
+        .first()
+        .expect("Model should have at least one input")
 }
 
 /// Benchmark full pipeline: Load → Optimize → Execute
