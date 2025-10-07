@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="assets/icon.png" alt="RONN Logo" width="200"/>
+</p>
+
 # RONN - Rust Open Neural Network Runtime
 
 A next-generation ML inference runtime written in pure Rust, combining high-performance ONNX compatibility with cognitive computing architectures.
