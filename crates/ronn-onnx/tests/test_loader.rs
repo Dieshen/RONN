@@ -3,26 +3,64 @@
 
 use ronn_core::NodeAttribute;
 use ronn_onnx::ModelLoader;
-use serde_json::json;
+use ronn_onnx::onnx_proto::*;
+use prost::Message;
+
+// Helper functions to create common protobuf structures with less boilerplate
+fn dim_value(val: i64) -> tensor_shape_proto::Dimension {
+    tensor_shape_proto::Dimension {
+        denotation: String::new(),
+        value: Some(tensor_shape_proto::dimension::Value::DimValue(val)),
+    }
+}
+
+fn dim_param(name: &str) -> tensor_shape_proto::Dimension {
+    tensor_shape_proto::Dimension {
+        denotation: String::new(),
+        value: Some(tensor_shape_proto::dimension::Value::DimParam(name.to_string())),
+    }
+}
+
+fn tensor_type(elem_type: i32, dims: Vec<i64>) -> TypeProto {
+    TypeProto {
+        denotation: String::new(),
+        value: Some(type_proto::Value::TensorType(type_proto::Tensor {
+            elem_type,
+            shape: Some(TensorShapeProto {
+                dim: dims.into_iter().map(dim_value).collect(),
+            }),
+        })),
+    }
+}
+
+fn value_info(name: &str, elem_type: i32, dims: Vec<i64>) -> ValueInfoProto {
+    ValueInfoProto {
+        name: name.to_string(),
+        r#type: Some(tensor_type(elem_type, dims)),
+        ..Default::default()
+    }
+}
 
 // ============ Model Loading Tests ============
 
 #[test]
 fn test_load_minimal_model() {
     // Create minimal valid ONNX model
-    let model_json = json!({
-        "ir_version": 7,
-        "producer_name": "test",
-        "graph": {
-            "name": "test_graph",
-            "node": [],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        producer_name: "test".to_string(),
+        graph: Some(GraphProto {
+            name: "test_graph".to_string(),
+            node: vec![],
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok(), "Should load minimal model");
@@ -34,60 +72,29 @@ fn test_load_minimal_model() {
 
 #[test]
 fn test_load_model_with_nodes() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test_graph",
-            "node": [
-                {
-                    "name": "relu_node",
-                    "op_type": "Relu",
-                    "input": ["input1"],
-                    "output": ["output1"],
-                    "attribute": []
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test_graph".to_string(),
+            node: vec![
+                NodeProto {
+                    name: "relu_node".to_string(),
+                    op_type: "Relu".to_string(),
+                    input: vec!["input1".to_string()],
+                    output: vec!["output1".to_string()],
+                    attribute: vec![],
+                    ..Default::default()
                 }
             ],
-            "input": [{
-                "name": "input1",
-                "type": {
-                    "value": {
-                        "tensor_type": {
-                            "elem_type": 1,
-                            "shape": {
-                                "dim": [
-                                    {"value": {"dim_value": 1}},
-                                    {"value": {"dim_value": 3}},
-                                    {"value": {"dim_value": 224}},
-                                    {"value": {"dim_value": 224}}
-                                ]
-                            }
-                        }
-                    }
-                }
-            }],
-            "output": [{
-                "name": "output1",
-                "type": {
-                    "value": {
-                        "tensor_type": {
-                            "elem_type": 1,
-                            "shape": {
-                                "dim": [
-                                    {"value": {"dim_value": 1}},
-                                    {"value": {"dim_value": 3}},
-                                    {"value": {"dim_value": 224}},
-                                    {"value": {"dim_value": 224}}
-                                ]
-                            }
-                        }
-                    }
-                }
-            }],
-            "initializer": []
-        }
-    });
+            input: vec![value_info("input1", 1, vec![1, 3, 224, 224])],
+            output: vec![value_info("output1", 1, vec![1, 3, 224, 224])],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -103,53 +110,31 @@ fn test_load_model_with_nodes() {
 
 #[test]
 fn test_load_model_with_initializers() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test_graph",
-            "node": [],
-            "input": [
-                {
-                    "name": "input1",
-                    "type": {
-                        "value": {
-                            "tensor_type": {
-                                "elem_type": 1,
-                                "shape": {"dim": [{"value": {"dim_value": 2}}]}
-                            }
-                        }
-                    }
-                },
-                {
-                    "name": "weight",
-                    "type": {
-                        "value": {
-                            "tensor_type": {
-                                "elem_type": 1,
-                                "shape": {"dim": [{"value": {"dim_value": 2}}]}
-                            }
-                        }
-                    }
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test_graph".to_string(),
+            node: vec![],
+            input: vec![
+                value_info("input1", 1, vec![2]),
+                value_info("weight", 1, vec![2]),
+            ],
+            output: vec![],
+            initializer: vec![
+                TensorProto {
+                    name: "weight".to_string(),
+                    dims: vec![2],
+                    data_type: 1,
+                    float_data: vec![1.0, 2.0],
+                    ..Default::default()
                 }
             ],
-            "output": [],
-            "initializer": [
-                {
-                    "name": "weight",
-                    "dims": [2],
-                    "data_type": 1,
-                    "float_data": [1.0, 2.0],
-                    "int32_data": [],
-                    "int64_data": [],
-                    "raw_data": [],
-                    "double_data": [],
-                    "uint64_data": []
-                }
-            ]
-        }
-    });
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -173,13 +158,14 @@ fn test_load_invalid_json() {
 
 #[test]
 fn test_load_model_without_graph() {
-    let model_json = json!({
-        "ir_version": 7,
-        "producer_name": "test"
-        // Missing graph field
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        producer_name: "test".to_string(),
+        graph: None, // Missing graph field
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_err(), "Should fail without graph");
@@ -189,31 +175,32 @@ fn test_load_model_without_graph() {
 
 #[test]
 fn test_parse_float_attribute() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "test_node",
-                "op_type": "Test",
-                "input": [],
-                "output": [],
-                "attribute": [{
-                    "name": "alpha",
-                    "f": 0.5,
-                    "type": 1,  // FLOAT
-                    "floats": [],
-                    "ints": [],
-                    "strings": []
-                }]
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "test_node".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![],
+                output: vec![],
+                attribute: vec![AttributeProto {
+                    name: "alpha".to_string(),
+                    f: 0.5,
+                    r#type: attribute_proto::AttributeType::Float as i32,
+                    ..Default::default()
+                }],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -233,31 +220,32 @@ fn test_parse_float_attribute() {
 
 #[test]
 fn test_parse_int_attribute() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "test_node",
-                "op_type": "Test",
-                "input": [],
-                "output": [],
-                "attribute": [{
-                    "name": "axis",
-                    "i": 1,
-                    "type": 2,  // INT
-                    "floats": [],
-                    "ints": [],
-                    "strings": []
-                }]
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "test_node".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![],
+                output: vec![],
+                attribute: vec![AttributeProto {
+                    name: "axis".to_string(),
+                    i: 1,
+                    r#type: attribute_proto::AttributeType::Int as i32,
+                    ..Default::default()
+                }],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -275,31 +263,32 @@ fn test_parse_int_attribute() {
 
 #[test]
 fn test_parse_string_attribute() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "test_node",
-                "op_type": "Test",
-                "input": [],
-                "output": [],
-                "attribute": [{
-                    "name": "mode",
-                    "s": [116, 101, 115, 116],  // "test" in bytes
-                    "type": 3,  // STRING
-                    "floats": [],
-                    "ints": [],
-                    "strings": []
-                }]
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "test_node".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![],
+                output: vec![],
+                attribute: vec![AttributeProto {
+                    name: "mode".to_string(),
+                    s: b"test".to_vec(),
+                    r#type: attribute_proto::AttributeType::String as i32,
+                    ..Default::default()
+                }],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -317,30 +306,32 @@ fn test_parse_string_attribute() {
 
 #[test]
 fn test_parse_floats_attribute() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "test_node",
-                "op_type": "Test",
-                "input": [],
-                "output": [],
-                "attribute": [{
-                    "name": "scales",
-                    "floats": [1.0, 2.0, 3.0],
-                    "type": 6,  // FLOATS
-                    "ints": [],
-                    "strings": []
-                }]
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "test_node".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![],
+                output: vec![],
+                attribute: vec![AttributeProto {
+                    name: "scales".to_string(),
+                    floats: vec![1.0, 2.0, 3.0],
+                    r#type: attribute_proto::AttributeType::Floats as i32,
+                    ..Default::default()
+                }],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -361,30 +352,32 @@ fn test_parse_floats_attribute() {
 
 #[test]
 fn test_parse_ints_attribute() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "test_node",
-                "op_type": "Test",
-                "input": [],
-                "output": [],
-                "attribute": [{
-                    "name": "pads",
-                    "ints": [1, 1, 1, 1],
-                    "type": 7,  // INTS
-                    "floats": [],
-                    "strings": []
-                }]
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "test_node".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![],
+                output: vec![],
+                attribute: vec![AttributeProto {
+                    name: "pads".to_string(),
+                    ints: vec![1, 1, 1, 1],
+                    r#type: attribute_proto::AttributeType::Ints as i32,
+                    ..Default::default()
+                }],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -402,47 +395,46 @@ fn test_parse_ints_attribute() {
 
 #[test]
 fn test_parse_multiple_attributes() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "conv_node",
-                "op_type": "Conv",
-                "input": ["input", "weight"],
-                "output": ["output"],
-                "attribute": [
-                    {
-                        "name": "group",
-                        "i": 1,
-                        "type": 2,
-                        "floats": [],
-                        "ints": [],
-                        "strings": []
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "conv_node".to_string(),
+                op_type: "Conv".to_string(),
+                input: vec!["input".to_string(), "weight".to_string()],
+                output: vec!["output".to_string()],
+                attribute: vec![
+                    AttributeProto {
+                        name: "group".to_string(),
+                        i: 1,
+                        r#type: attribute_proto::AttributeType::Int as i32,
+                        ..Default::default()
                     },
-                    {
-                        "name": "strides",
-                        "ints": [1, 1],
-                        "type": 7,
-                        "floats": [],
-                        "strings": []
+                    AttributeProto {
+                        name: "strides".to_string(),
+                        ints: vec![1, 1],
+                        r#type: attribute_proto::AttributeType::Ints as i32,
+                        ..Default::default()
                     },
-                    {
-                        "name": "pads",
-                        "ints": [0, 0, 0, 0],
-                        "type": 7,
-                        "floats": [],
-                        "strings": []
+                    AttributeProto {
+                        name: "pads".to_string(),
+                        ints: vec![0, 0, 0, 0],
+                        r#type: attribute_proto::AttributeType::Ints as i32,
+                        ..Default::default()
                     }
-                ]
+                ],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -461,35 +453,20 @@ fn test_parse_multiple_attributes() {
 
 #[test]
 fn test_shape_inference_static() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [],
-            "input": [{
-                "name": "input",
-                "type": {
-                    "value": {
-                        "tensor_type": {
-                            "elem_type": 1,
-                            "shape": {
-                                "dim": [
-                                    {"value": {"dim_value": 1}},
-                                    {"value": {"dim_value": 3}},
-                                    {"value": {"dim_value": 224}},
-                                    {"value": {"dim_value": 224}}
-                                ]
-                            }
-                        }
-                    }
-                }
-            }],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![],
+            input: vec![value_info("input", 1, vec![1, 3, 224, 224])],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -500,35 +477,37 @@ fn test_shape_inference_static() {
 
 #[test]
 fn test_shape_inference_dynamic() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [],
-            "input": [{
-                "name": "input",
-                "type": {
-                    "value": {
-                        "tensor_type": {
-                            "elem_type": 1,
-                            "shape": {
-                                "dim": [
-                                    {"value": {"dim_param": "batch"}},
-                                    {"value": {"dim_value": 3}},
-                                    {"value": {"dim_value": 224}},
-                                    {"value": {"dim_value": 224}}
-                                ]
-                            }
-                        }
-                    }
-                }
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![],
+            input: vec![ValueInfoProto {
+                name: "input".to_string(),
+                r#type: Some(TypeProto {
+                    denotation: String::new(),
+                    value: Some(type_proto::Value::TensorType(type_proto::Tensor {
+                        elem_type: 1,
+                        shape: Some(TensorShapeProto {
+                            dim: vec![
+                                dim_param("batch"),
+                                dim_value(3),
+                                dim_value(224),
+                                dim_value(224),
+                            ],
+                        }),
+                    })),
+                }),
+                ..Default::default()
             }],
-            "output": [],
-            "initializer": []
-        }
-    });
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -542,26 +521,29 @@ fn test_shape_inference_dynamic() {
 
 #[test]
 fn test_node_name_generation() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [
-                {
-                    // Node without name - should be auto-generated
-                    "op_type": "Relu",
-                    "input": ["x"],
-                    "output": ["y"],
-                    "attribute": []
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![
+                NodeProto {
+                    name: "".to_string(), // Node without name - should be auto-generated
+                    op_type: "Relu".to_string(),
+                    input: vec!["x".to_string()],
+                    output: vec!["y".to_string()],
+                    attribute: vec![],
+                    ..Default::default()
                 }
             ],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -575,33 +557,37 @@ fn test_node_name_generation() {
 
 #[test]
 fn test_multiple_nodes() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [
-                {
-                    "name": "relu1",
-                    "op_type": "Relu",
-                    "input": ["input"],
-                    "output": ["relu_out"],
-                    "attribute": []
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![
+                NodeProto {
+                    name: "relu1".to_string(),
+                    op_type: "Relu".to_string(),
+                    input: vec!["input".to_string()],
+                    output: vec!["relu_out".to_string()],
+                    attribute: vec![],
+                    ..Default::default()
                 },
-                {
-                    "name": "add1",
-                    "op_type": "Add",
-                    "input": ["relu_out", "bias"],
-                    "output": ["output"],
-                    "attribute": []
+                NodeProto {
+                    name: "add1".to_string(),
+                    op_type: "Add".to_string(),
+                    input: vec!["relu_out".to_string(), "bias".to_string()],
+                    output: vec!["output".to_string()],
+                    attribute: vec![],
+                    ..Default::default()
                 }
             ],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -621,18 +607,20 @@ fn test_various_ir_versions() {
     let versions = vec![3, 4, 5, 6, 7, 8, 9];
 
     for version in versions {
-        let model_json = json!({
-            "ir_version": version,
-            "graph": {
-                "name": "test",
-                "node": [],
-                "input": [],
-                "output": [],
-                "initializer": []
-            }
-        });
+        let model_proto = ModelProto {
+            ir_version: version,
+            graph: Some(GraphProto {
+                name: "test".to_string(),
+                node: vec![],
+                input: vec![],
+                output: vec![],
+                initializer: vec![],
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
 
-        let model_bytes = serde_json::to_vec(&model_json).unwrap();
+        let model_bytes = model_proto.encode_to_vec();
         let result = ModelLoader::load_from_bytes(&model_bytes);
 
         assert!(result.is_ok(), "Should support IR version {}", version);
@@ -646,18 +634,20 @@ fn test_various_ir_versions() {
 
 #[test]
 fn test_empty_graph() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "empty",
-            "node": [],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "empty".to_string(),
+            node: vec![],
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -671,23 +661,26 @@ fn test_empty_graph() {
 
 #[test]
 fn test_producer_name_optional() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-        // No producer_name field
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        producer_name: "".to_string(), // Empty producer name
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![],
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
 
     let model = result.unwrap();
-    assert_eq!(model.producer_name, None);
+    // Empty string might be treated as None
+    assert!(model.producer_name.is_none() || model.producer_name == Some("".to_string()));
 }

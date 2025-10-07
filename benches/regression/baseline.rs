@@ -9,9 +9,10 @@
 //! Run with: cargo bench --bench regression
 
 use criterion::{black_box, criterion_group, BenchmarkId, Criterion, Throughput};
-use ronn_api::{Environment, InferenceSession, SessionConfig};
+use ronn_api::{Model, SessionOptions};
 use ronn_core::{DataType, Tensor, TensorLayout};
 use ronn_graph::OptimizationLevel;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -57,18 +58,18 @@ pub fn bench_latency_target(c: &mut Criterion) {
         return;
     }
 
-    let env = Environment::new("benchmark_env").unwrap();
-    let config = SessionConfig {
-        optimization_level: OptimizationLevel::O2,
-        ..Default::default()
-    };
+    let model = Model::load(&model_path).unwrap();
+    let options = SessionOptions::new()
+        .with_optimization_level(OptimizationLevel::O2);
 
-    let session = InferenceSession::new(&env, &model_path, config).unwrap();
+    let session = model.create_session(options).unwrap();
     let input = create_test_input(vec![1, 3, 224, 224]);
 
     group.bench_function("inference_latency", |b| {
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
@@ -93,13 +94,11 @@ pub fn bench_throughput_target(c: &mut Criterion) {
         return;
     }
 
-    let env = Environment::new("benchmark_env").unwrap();
-    let config = SessionConfig {
-        optimization_level: OptimizationLevel::O3,
-        ..Default::default()
-    };
+    let model = Model::load(&model_path).unwrap();
+    let options = SessionOptions::new()
+        .with_optimization_level(OptimizationLevel::O3);
 
-    let session = InferenceSession::new(&env, &model_path, config).unwrap();
+    let session = model.create_session(options).unwrap();
     let input = create_test_input(vec![1, 3, 224, 224]);
 
     // Measure throughput over 10 seconds
@@ -112,7 +111,9 @@ pub fn bench_throughput_target(c: &mut Criterion) {
         b.iter_custom(|iters| {
             let start = Instant::now();
             for _ in 0..iters {
-                let _result = session.run(black_box(vec![input.clone()])).unwrap();
+                let mut inputs = HashMap::new();
+                inputs.insert("input", input.clone());
+                let _result = session.run(black_box(inputs)).unwrap();
             }
             start.elapsed()
         });
@@ -149,13 +150,14 @@ pub fn bench_memory_target(c: &mut Criterion) {
             BenchmarkId::new("memory_usage", size_name),
             &shape,
             |b, shape| {
-                let env = Environment::new("benchmark_env").unwrap();
-                let config = SessionConfig::default();
-                let session = InferenceSession::new(&env, &model_path, config).unwrap();
+                let model = Model::load(&model_path).unwrap();
+                let session = model.create_session_default().unwrap();
 
                 b.iter(|| {
                     let input = create_test_input(shape.clone());
-                    let _result = session.run(black_box(vec![input])).unwrap();
+                    let mut inputs = HashMap::new();
+                    inputs.insert("input", input);
+                    let _result = session.run(black_box(inputs)).unwrap();
                 });
             },
         );
@@ -181,15 +183,9 @@ pub fn bench_initialization_overhead(c: &mut Criterion) {
     }
 
     group.bench_function("session_creation", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-
         b.iter(|| {
-            let config = SessionConfig::default();
-            let _session = InferenceSession::new(
-                &env,
-                black_box(&model_path),
-                black_box(config),
-            ).unwrap();
+            let model = Model::load(black_box(&model_path)).unwrap();
+            let _session = model.create_session_default().unwrap();
         });
     });
 
@@ -210,13 +206,11 @@ pub fn bench_batch_efficiency(c: &mut Criterion) {
         return;
     }
 
-    let env = Environment::new("benchmark_env").unwrap();
-    let config = SessionConfig {
-        optimization_level: OptimizationLevel::O2,
-        ..Default::default()
-    };
+    let model = Model::load(&model_path).unwrap();
+    let options = SessionOptions::new()
+        .with_optimization_level(OptimizationLevel::O2);
 
-    let session = InferenceSession::new(&env, &model_path, config).unwrap();
+    let session = model.create_session(options).unwrap();
 
     // Test different batch sizes
     let batch_sizes = [1, 2, 4, 8, 16, 32];
@@ -231,7 +225,9 @@ pub fn bench_batch_efficiency(c: &mut Criterion) {
                 let input = create_test_input(vec![batch_size, 3, 224, 224]);
 
                 b.iter(|| {
-                    let _result = session.run(black_box(vec![input.clone()])).unwrap();
+                    let mut inputs = HashMap::new();
+                    inputs.insert("input", input.clone());
+                    let _result = session.run(black_box(inputs)).unwrap();
                 });
             },
         );
@@ -266,17 +262,17 @@ pub fn bench_optimization_regression(c: &mut Criterion) {
             BenchmarkId::new("opt_level", name),
             level,
             |b, &level| {
-                let env = Environment::new("benchmark_env").unwrap();
-                let config = SessionConfig {
-                    optimization_level: level,
-                    ..Default::default()
-                };
+                let model = Model::load(&model_path).unwrap();
+                let options = SessionOptions::new()
+                    .with_optimization_level(level);
 
-                let session = InferenceSession::new(&env, &model_path, config).unwrap();
+                let session = model.create_session(options).unwrap();
                 let input = create_test_input(vec![1, 3, 224, 224]);
 
                 b.iter(|| {
-                    let _result = session.run(black_box(vec![input.clone()])).unwrap();
+                    let mut inputs = HashMap::new();
+                    inputs.insert("input", input.clone());
+                    let _result = session.run(black_box(inputs)).unwrap();
                 });
             },
         );
@@ -299,15 +295,16 @@ pub fn bench_allocation_patterns(c: &mut Criterion) {
         return;
     }
 
-    let env = Environment::new("benchmark_env").unwrap();
-    let config = SessionConfig::default();
-    let session = InferenceSession::new(&env, &model_path, config).unwrap();
+    let model = Model::load(&model_path).unwrap();
+    let session = model.create_session_default().unwrap();
 
     // Single inference - measure allocation overhead
     group.bench_function("single_inference_allocation", |b| {
         b.iter(|| {
             let input = create_test_input(vec![1, 3, 224, 224]);
-            let _result = session.run(black_box(vec![input])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input);
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
@@ -316,7 +313,9 @@ pub fn bench_allocation_patterns(c: &mut Criterion) {
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
@@ -343,16 +342,16 @@ pub fn bench_e2e_baseline(c: &mut Criterion) {
 
     group.bench_function("full_pipeline_baseline", |b| {
         b.iter(|| {
-            // Full pipeline: create env, session, run inference
-            let env = Environment::new("benchmark_env").unwrap();
-            let config = SessionConfig {
-                optimization_level: OptimizationLevel::O2,
-                ..Default::default()
-            };
+            // Full pipeline: load model, create session, run inference
+            let model = Model::load(black_box(&model_path)).unwrap();
+            let options = SessionOptions::new()
+                .with_optimization_level(OptimizationLevel::O2);
 
-            let session = InferenceSession::new(&env, black_box(&model_path), config).unwrap();
+            let session = model.create_session(options).unwrap();
             let input = create_test_input(vec![1, 3, 224, 224]);
-            let _result = session.run(black_box(vec![input])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input);
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 

@@ -10,9 +10,10 @@
 //! Run with: cargo bench --bench integration
 
 use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
-use ronn_api::{Environment, InferenceSession, SessionConfig};
+use ronn_api::{Model, SessionOptions};
 use ronn_core::{DataType, Tensor, TensorLayout};
 use ronn_providers::ProviderType;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -35,10 +36,10 @@ pub fn bench_all_providers(c: &mut Criterion) {
     }
 
     let providers = vec![
-        ("CPU", ProviderType::Cpu),
-        ("GPU", ProviderType::Gpu),
+        ("CPU", ProviderType::CPU),
+        ("GPU", ProviderType::GPU),
         ("BitNet", ProviderType::BitNet),
-        ("WASM", ProviderType::Wasm),
+        ("WebAssembly", ProviderType::WebAssembly),
     ];
 
     for (name, provider_type) in providers {
@@ -46,14 +47,12 @@ pub fn bench_all_providers(c: &mut Criterion) {
             BenchmarkId::new("provider", name),
             &provider_type,
             |b, provider_type| {
-                let env = Environment::new("benchmark_env").unwrap();
-                let config = SessionConfig {
-                    preferred_providers: vec![*provider_type],
-                    ..Default::default()
-                };
+                let model = Model::load(&model_path).unwrap();
+                let options = SessionOptions::new()
+                    .with_provider(*provider_type);
 
                 // Try to create session - skip if provider not available
-                let session = match InferenceSession::new(&env, &model_path, config) {
+                let session = match model.create_session(options) {
                     Ok(s) => s,
                     Err(_) => {
                         eprintln!("Provider {} not available, skipping", name);
@@ -64,7 +63,9 @@ pub fn bench_all_providers(c: &mut Criterion) {
                 let input = create_test_input(vec![1, 3, 224, 224]);
 
                 b.iter(|| {
-                    let _result = session.run(black_box(vec![input.clone()])).unwrap();
+                    let mut inputs = HashMap::new();
+                    inputs.insert("input", input.clone());
+                    let _result = session.run(black_box(inputs)).unwrap();
                 });
             },
         );
@@ -92,14 +93,12 @@ pub fn bench_multi_gpu_scaling(c: &mut Criterion) {
             BenchmarkId::new("gpu_count", gpu_count),
             gpu_count,
             |b, &gpu_count| {
-                let env = Environment::new("benchmark_env").unwrap();
-                let config = SessionConfig {
-                    preferred_providers: vec![ProviderType::Gpu],
-                    num_threads: gpu_count,
-                    ..Default::default()
-                };
+                let model = Model::load(&model_path).unwrap();
+                let options = SessionOptions::new()
+                    .with_provider(ProviderType::GPU)
+                    .with_num_threads(gpu_count);
 
-                let session = match InferenceSession::new(&env, &model_path, config) {
+                let session = match model.create_session(options) {
                     Ok(s) => s,
                     Err(_) => {
                         eprintln!("Multi-GPU with {} GPUs not available, skipping", gpu_count);
@@ -110,7 +109,9 @@ pub fn bench_multi_gpu_scaling(c: &mut Criterion) {
                 let input = create_test_input(vec![1, 3, 224, 224]);
 
                 b.iter(|| {
-                    let _result = session.run(black_box(vec![input.clone()])).unwrap();
+                    let mut inputs = HashMap::new();
+                    inputs.insert("input", input.clone());
+                    let _result = session.run(black_box(inputs)).unwrap();
                 });
             },
         );
@@ -132,37 +133,36 @@ pub fn bench_fallback_mechanism(c: &mut Criterion) {
 
     // Test fallback from GPU to CPU
     group.bench_function("gpu_to_cpu_fallback", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            preferred_providers: vec![ProviderType::Gpu, ProviderType::Cpu],
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_provider(ProviderType::GPU)
+            .with_provider(ProviderType::CPU);
 
-        let session = InferenceSession::new(&env, &model_path, config).unwrap();
+        let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
     // Test fallback chain: BitNet -> GPU -> CPU
     group.bench_function("full_fallback_chain", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            preferred_providers: vec![
-                ProviderType::BitNet,
-                ProviderType::Gpu,
-                ProviderType::Cpu,
-            ],
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_provider(ProviderType::BitNet)
+            .with_provider(ProviderType::GPU)
+            .with_provider(ProviderType::CPU);
 
-        let session = InferenceSession::new(&env, &model_path, config).unwrap();
+        let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
@@ -181,25 +181,26 @@ pub fn bench_provider_switching(c: &mut Criterion) {
     }
 
     group.bench_function("switch_cpu_to_gpu", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
             // Create CPU session
-            let cpu_config = SessionConfig {
-                preferred_providers: vec![ProviderType::Cpu],
-                ..Default::default()
-            };
-            let cpu_session = InferenceSession::new(&env, &model_path, cpu_config).unwrap();
-            let _cpu_result = cpu_session.run(vec![input.clone()]).unwrap();
+            let model = Model::load(&model_path).unwrap();
+            let cpu_options = SessionOptions::new()
+                .with_provider(ProviderType::CPU);
+            let cpu_session = model.create_session(cpu_options).unwrap();
+            let mut cpu_inputs = HashMap::new();
+            cpu_inputs.insert("input", input.clone());
+            let _cpu_result = cpu_session.run(cpu_inputs).unwrap();
 
             // Create GPU session
-            let gpu_config = SessionConfig {
-                preferred_providers: vec![ProviderType::Gpu],
-                ..Default::default()
-            };
-            if let Ok(gpu_session) = InferenceSession::new(&env, &model_path, gpu_config) {
-                let _gpu_result = gpu_session.run(black_box(vec![input.clone()])).unwrap();
+            let model = Model::load(&model_path).unwrap();
+            let gpu_options = SessionOptions::new()
+                .with_provider(ProviderType::GPU);
+            if let Ok(gpu_session) = model.create_session(gpu_options) {
+                let mut gpu_inputs = HashMap::new();
+                gpu_inputs.insert("input", input.clone());
+                let _gpu_result = gpu_session.run(black_box(gpu_inputs)).unwrap();
             }
         });
     });
@@ -219,31 +220,31 @@ pub fn bench_concurrent_providers(c: &mut Criterion) {
     }
 
     group.bench_function("cpu_and_gpu_concurrent", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-
         // Create CPU session
-        let cpu_config = SessionConfig {
-            preferred_providers: vec![ProviderType::Cpu],
-            ..Default::default()
-        };
-        let cpu_session = InferenceSession::new(&env, &model_path, cpu_config).unwrap();
+        let cpu_model = Model::load(&model_path).unwrap();
+        let cpu_options = SessionOptions::new()
+            .with_provider(ProviderType::CPU);
+        let cpu_session = cpu_model.create_session(cpu_options).unwrap();
 
         // Try to create GPU session
-        let gpu_config = SessionConfig {
-            preferred_providers: vec![ProviderType::Gpu],
-            ..Default::default()
-        };
-        let gpu_session_opt = InferenceSession::new(&env, &model_path, gpu_config).ok();
+        let gpu_model = Model::load(&model_path).unwrap();
+        let gpu_options = SessionOptions::new()
+            .with_provider(ProviderType::GPU);
+        let gpu_session_opt = gpu_model.create_session(gpu_options).ok();
 
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
             // Run on CPU
-            let _cpu_result = cpu_session.run(black_box(vec![input.clone()])).unwrap();
+            let mut cpu_inputs = HashMap::new();
+            cpu_inputs.insert("input", input.clone());
+            let _cpu_result = cpu_session.run(black_box(cpu_inputs)).unwrap();
 
             // Run on GPU if available
             if let Some(ref gpu_session) = gpu_session_opt {
-                let _gpu_result = gpu_session.run(black_box(vec![input.clone()])).unwrap();
+                let mut gpu_inputs = HashMap::new();
+                gpu_inputs.insert("input", input.clone());
+                let _gpu_result = gpu_session.run(black_box(gpu_inputs)).unwrap();
             }
         });
     });

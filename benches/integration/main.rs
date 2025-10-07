@@ -4,11 +4,12 @@
 //!
 //! Run with: cargo bench --bench integration
 
-mod integration;
+mod multi_provider;
+mod optimization_impact;
 
 use criterion::criterion_main;
 
 criterion_main!(
-    integration::multi_provider::multi_provider_benches,
-    integration::optimization_impact::optimization_impact_benches
+    multi_provider::multi_provider_benches,
+    optimization_impact::optimization_impact_benches
 );

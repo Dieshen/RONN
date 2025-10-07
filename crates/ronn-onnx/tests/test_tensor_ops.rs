@@ -34,7 +34,7 @@ fn test_reshape_basic() {
     ).unwrap();
 
     // Target shape: 3x2
-    let shape_data = vec![3.0, 2.0]; // Will be converted to i64
+    let shape_data = vec![3.0, 2.0];
     let shape_tensor = Tensor::from_data(
         shape_data,
         vec![2],

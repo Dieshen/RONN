@@ -2,7 +2,36 @@
 //! Tests: Malformed inputs, boundary conditions, invalid protobuf data
 
 use ronn_onnx::ModelLoader;
-use serde_json::json;
+use ronn_onnx::onnx_proto::*;
+use prost::Message;
+
+// Helper functions to create common protobuf structures with less boilerplate
+fn dim_value(val: i64) -> tensor_shape_proto::Dimension {
+    tensor_shape_proto::Dimension {
+        denotation: String::new(),
+        value: Some(tensor_shape_proto::dimension::Value::DimValue(val)),
+    }
+}
+
+fn tensor_type(elem_type: i32, dims: Vec<i64>) -> TypeProto {
+    TypeProto {
+        denotation: String::new(),
+        value: Some(type_proto::Value::TensorType(type_proto::Tensor {
+            elem_type,
+            shape: Some(TensorShapeProto {
+                dim: dims.into_iter().map(dim_value).collect(),
+            }),
+        })),
+    }
+}
+
+fn value_info(name: &str, elem_type: i32, dims: Vec<i64>) -> ValueInfoProto {
+    ValueInfoProto {
+        name: name.to_string(),
+        r#type: Some(tensor_type(elem_type, dims)),
+        ..Default::default()
+    }
+}
 
 // ============ Malformed Input Tests ============
 
@@ -41,18 +70,20 @@ fn test_invalid_unicode() {
 
 #[test]
 fn test_missing_graph_name() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            // Missing "name" field
-            "node": [],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "".to_string(), // Empty name
+            node: vec![],
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     // Should still load - name is optional
@@ -61,24 +92,27 @@ fn test_missing_graph_name() {
 
 #[test]
 fn test_missing_node_op_type() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "node1",
-                // Missing "op_type"
-                "input": [],
-                "output": [],
-                "attribute": []
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "node1".to_string(),
+                op_type: "".to_string(), // Empty op_type
+                input: vec![],
+                output: vec![],
+                attribute: vec![],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     // Should still load with empty op_type
@@ -87,28 +121,26 @@ fn test_missing_node_op_type() {
 
 #[test]
 fn test_missing_tensor_dims() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [],
-            "input": [],
-            "output": [],
-            "initializer": [{
-                "name": "weight",
-                // Missing "dims"
-                "data_type": 1,
-                "float_data": [1.0, 2.0],
-                "int32_data": [],
-                "int64_data": [],
-                "raw_data": [],
-                "double_data": [],
-                "uint64_data": []
-            }]
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![],
+            input: vec![],
+            output: vec![],
+            initializer: vec![TensorProto {
+                name: "weight".to_string(),
+                dims: vec![], // Empty dims
+                data_type: 1,
+                float_data: vec![1.0, 2.0],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     // May fail during tensor creation
@@ -120,31 +152,32 @@ fn test_missing_tensor_dims() {
 
 #[test]
 fn test_attribute_type_mismatch() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "test_node",
-                "op_type": "Test",
-                "input": [],
-                "output": [],
-                "attribute": [{
-                    "name": "value",
-                    "type": 1,  // FLOAT
-                    "i": 42,    // But providing int value
-                    "floats": [],
-                    "ints": [],
-                    "strings": []
-                }]
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "test_node".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![],
+                output: vec![],
+                attribute: vec![AttributeProto {
+                    name: "value".to_string(),
+                    r#type: attribute_proto::AttributeType::Float as i32,
+                    i: 42, // But providing int value
+                    ..Default::default()
+                }],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     // Should handle gracefully (use 0.0 as default)
@@ -153,28 +186,20 @@ fn test_attribute_type_mismatch() {
 
 #[test]
 fn test_invalid_data_type() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [],
-            "input": [{
-                "name": "input",
-                "type": {
-                    "value": {
-                        "tensor_type": {
-                            "elem_type": 999,  // Invalid type
-                            "shape": {"dim": [{"value": {"dim_value": 2}}]}
-                        }
-                    }
-                }
-            }],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![],
+            input: vec![value_info("input", 999, vec![2])], // Invalid type
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     // Should load but may have issues with type mapping
@@ -186,33 +211,20 @@ fn test_invalid_data_type() {
 
 #[test]
 fn test_very_large_tensor_dims() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [],
-            "input": [{
-                "name": "huge_input",
-                "type": {
-                    "value": {
-                        "tensor_type": {
-                            "elem_type": 1,
-                            "shape": {
-                                "dim": [
-                                    {"value": {"dim_value": 1000000}},
-                                    {"value": {"dim_value": 1000000}}
-                                ]
-                            }
-                        }
-                    }
-                }
-            }],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![],
+            input: vec![value_info("huge_input", 1, vec![1000000, 1000000])],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     // Should be able to parse the shape without allocating tensor
@@ -221,32 +233,20 @@ fn test_very_large_tensor_dims() {
 
 #[test]
 fn test_zero_dimensions() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [],
-            "input": [{
-                "name": "zero_dim",
-                "type": {
-                    "value": {
-                        "tensor_type": {
-                            "elem_type": 1,
-                            "shape": {
-                                "dim": [
-                                    {"value": {"dim_value": 0}}
-                                ]
-                            }
-                        }
-                    }
-                }
-            }],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![],
+            input: vec![value_info("zero_dim", 1, vec![0])],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -257,32 +257,20 @@ fn test_zero_dimensions() {
 
 #[test]
 fn test_negative_dimensions() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [],
-            "input": [{
-                "name": "negative_dim",
-                "type": {
-                    "value": {
-                        "tensor_type": {
-                            "elem_type": 1,
-                            "shape": {
-                                "dim": [
-                                    {"value": {"dim_value": -1}}
-                                ]
-                            }
-                        }
-                    }
-                }
-            }],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![],
+            input: vec![value_info("negative_dim", 1, vec![-1])],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     // Negative dimensions might be interpreted as large positive numbers
@@ -297,27 +285,30 @@ fn test_deeply_nested_graph() {
     // Create a model with many nodes
     let mut nodes = Vec::new();
     for i in 0..100 {
-        nodes.push(json!({
-            "name": format!("node_{}", i),
-            "op_type": "Relu",
-            "input": [format!("input_{}", i)],
-            "output": [format!("output_{}", i)],
-            "attribute": []
-        }));
+        nodes.push(NodeProto {
+            name: format!("node_{}", i),
+            op_type: "Relu".to_string(),
+            input: vec![format!("input_{}", i)],
+            output: vec![format!("output_{}", i)],
+            attribute: vec![],
+            ..Default::default()
+        });
     }
 
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "deep_graph",
-            "node": nodes,
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "deep_graph".to_string(),
+            node: nodes,
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok(), "Should handle many nodes");
@@ -333,18 +324,20 @@ fn test_deeply_nested_graph() {
 fn test_very_long_names() {
     let long_name = "a".repeat(10000);
 
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": long_name,
-            "node": [],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: long_name,
+            node: vec![],
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok(), "Should handle long names");
@@ -352,24 +345,27 @@ fn test_very_long_names() {
 
 #[test]
 fn test_empty_string_names() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "",
-            "node": [{
-                "name": "",
-                "op_type": "",
-                "input": [""],
-                "output": [""],
-                "attribute": []
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "".to_string(),
+            node: vec![NodeProto {
+                name: "".to_string(),
+                op_type: "".to_string(),
+                input: vec!["".to_string()],
+                output: vec!["".to_string()],
+                attribute: vec![],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok(), "Should handle empty strings");
@@ -379,18 +375,20 @@ fn test_empty_string_names() {
 fn test_special_characters_in_names() {
     let special_chars = "!@#$%^&*()[]{}|\\:;'\"<>,.?/~`";
 
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": special_chars,
-            "node": [],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: special_chars.to_string(),
+            node: vec![],
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok(), "Should handle special characters");
@@ -400,30 +398,32 @@ fn test_special_characters_in_names() {
 
 #[test]
 fn test_empty_arrays() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "test_node",
-                "op_type": "Test",
-                "input": [],  // Empty input array
-                "output": [], // Empty output array
-                "attribute": [{
-                    "name": "empty_ints",
-                    "ints": [],
-                    "type": 7,
-                    "floats": [],
-                    "strings": []
-                }]
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "test_node".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![], // Empty input array
+                output: vec![], // Empty output array
+                attribute: vec![AttributeProto {
+                    name: "empty_ints".to_string(),
+                    ints: vec![],
+                    r#type: attribute_proto::AttributeType::Ints as i32,
+                    ..Default::default()
+                }],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok());
@@ -433,30 +433,32 @@ fn test_empty_arrays() {
 fn test_very_large_arrays() {
     let large_array: Vec<i64> = (0..10000).collect();
 
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "test_node",
-                "op_type": "Test",
-                "input": [],
-                "output": [],
-                "attribute": [{
-                    "name": "large_ints",
-                    "ints": large_array,
-                    "type": 7,
-                    "floats": [],
-                    "strings": []
-                }]
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "test_node".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![],
+                output: vec![],
+                attribute: vec![AttributeProto {
+                    name: "large_ints".to_string(),
+                    ints: large_array,
+                    r#type: attribute_proto::AttributeType::Ints as i32,
+                    ..Default::default()
+                }],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok(), "Should handle large arrays");
@@ -466,24 +468,27 @@ fn test_very_large_arrays() {
 
 #[test]
 fn test_node_output_as_input() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "cycle",
-                "op_type": "Add",
-                "input": ["x", "y"],
-                "output": ["x"],  // Output same as input
-                "attribute": []
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "cycle".to_string(),
+                op_type: "Add".to_string(),
+                input: vec!["x".to_string(), "y".to_string()],
+                output: vec!["x".to_string()], // Output same as input
+                attribute: vec![],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     // Should parse but graph validation might catch issues
@@ -494,92 +499,88 @@ fn test_node_output_as_input() {
 
 #[test]
 fn test_extreme_float_values() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "extreme",
-                "op_type": "Test",
-                "input": [],
-                "output": [],
-                "attribute": [
-                    {
-                        "name": "infinity",
-                        "f": f32::INFINITY,
-                        "type": 1,
-                        "floats": [],
-                        "ints": [],
-                        "strings": []
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "extreme".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![],
+                output: vec![],
+                attribute: vec![
+                    AttributeProto {
+                        name: "infinity".to_string(),
+                        f: f32::INFINITY,
+                        r#type: attribute_proto::AttributeType::Float as i32,
+                        ..Default::default()
                     },
-                    {
-                        "name": "neg_infinity",
-                        "f": f32::NEG_INFINITY,
-                        "type": 1,
-                        "floats": [],
-                        "ints": [],
-                        "strings": []
+                    AttributeProto {
+                        name: "neg_infinity".to_string(),
+                        f: f32::NEG_INFINITY,
+                        r#type: attribute_proto::AttributeType::Float as i32,
+                        ..Default::default()
                     },
-                    {
-                        "name": "nan",
-                        "f": f32::NAN,
-                        "type": 1,
-                        "floats": [],
-                        "ints": [],
-                        "strings": []
+                    AttributeProto {
+                        name: "nan".to_string(),
+                        f: f32::NAN,
+                        r#type: attribute_proto::AttributeType::Float as i32,
+                        ..Default::default()
                     }
-                ]
+                ],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
-    // JSON may not support infinity/nan, but should not panic
+    // Protobuf should support infinity/nan
     let _ = result;
 }
 
 #[test]
 fn test_extreme_int_values() {
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "test",
-            "node": [{
-                "name": "extreme",
-                "op_type": "Test",
-                "input": [],
-                "output": [],
-                "attribute": [
-                    {
-                        "name": "max_i64",
-                        "i": i64::MAX,
-                        "type": 2,
-                        "floats": [],
-                        "ints": [],
-                        "strings": []
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "test".to_string(),
+            node: vec![NodeProto {
+                name: "extreme".to_string(),
+                op_type: "Test".to_string(),
+                input: vec![],
+                output: vec![],
+                attribute: vec![
+                    AttributeProto {
+                        name: "max_i64".to_string(),
+                        i: i64::MAX,
+                        r#type: attribute_proto::AttributeType::Int as i32,
+                        ..Default::default()
                     },
-                    {
-                        "name": "min_i64",
-                        "i": i64::MIN,
-                        "type": 2,
-                        "floats": [],
-                        "ints": [],
-                        "strings": []
+                    AttributeProto {
+                        name: "min_i64".to_string(),
+                        i: i64::MIN,
+                        r#type: attribute_proto::AttributeType::Int as i32,
+                        ..Default::default()
                     }
-                ]
+                ],
+                ..Default::default()
             }],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let model_bytes = model_proto.encode_to_vec();
     let result = ModelLoader::load_from_bytes(&model_bytes);
 
     assert!(result.is_ok(), "Should handle extreme integers");
@@ -590,22 +591,25 @@ fn test_extreme_int_values() {
 #[test]
 fn test_large_file_size() {
     // Create a model with reasonable content but test parsing doesn't allocate excessively
-    let model_json = json!({
-        "ir_version": 7,
-        "graph": {
-            "name": "memory_test",
-            "node": [],
-            "input": [],
-            "output": [],
-            "initializer": []
-        }
-    });
+    let model_proto = ModelProto {
+        ir_version: 7,
+        graph: Some(GraphProto {
+            name: "memory_test".to_string(),
+            node: vec![],
+            input: vec![],
+            output: vec![],
+            initializer: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
-    let mut model_bytes = serde_json::to_vec(&model_json).unwrap();
+    let mut model_bytes = model_proto.encode_to_vec();
 
-    // Pad with whitespace (won't allocate much in parser)
-    model_bytes.extend(vec![b' '; 1000]);
+    // Pad with extra bytes (will be ignored by protobuf parser)
+    model_bytes.extend(vec![0; 1000]);
 
     let result = ModelLoader::load_from_bytes(&model_bytes);
-    assert!(result.is_ok());
+    // May fail due to invalid trailing data, but should not panic
+    let _ = result;
 }

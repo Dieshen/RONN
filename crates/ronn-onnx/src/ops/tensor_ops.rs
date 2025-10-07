@@ -26,8 +26,14 @@ impl OnnxOperator for ReshapeOp {
         }
 
         // Second input is the target shape tensor
-        let shape = inputs[1].to_vec1::<i64>()?;
-        let shape_usize: Vec<usize> = shape.iter().map(|&x| x as usize).collect();
+        // Try i64 first (ONNX spec), fall back to f32 if needed
+        let shape_usize: Vec<usize> = if let Ok(shape) = inputs[1].to_vec1::<i64>() {
+            shape.iter().map(|&x| x as usize).collect()
+        } else {
+            // Fall back to f32 and convert
+            let shape_f32 = inputs[1].to_vec1::<f32>()?;
+            shape_f32.iter().map(|&x| x as usize).collect()
+        };
 
         let result = inputs[0].reshape(&shape_usize)?;
         Ok(vec![result])
@@ -133,7 +139,13 @@ impl OnnxOperator for SplitOp {
             s.iter().map(|&x| x as usize).collect()
         } else if inputs.len() > 1 {
             // Split sizes provided as second input
-            inputs[1].to_vec1::<i64>()?.iter().map(|&x| x as usize).collect()
+            // Try i64 first (ONNX spec), fall back to f32 if needed
+            if let Ok(split_i64) = inputs[1].to_vec1::<i64>() {
+                split_i64.iter().map(|&x| x as usize).collect()
+            } else {
+                let split_f32 = inputs[1].to_vec1::<f32>()?;
+                split_f32.iter().map(|&x| x as usize).collect()
+            }
         } else {
             // Equal splits
             let num_outputs = if let Some(NodeAttribute::Int(n)) = attributes.get("num_outputs") {

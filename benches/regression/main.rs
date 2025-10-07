@@ -4,8 +4,8 @@
 //!
 //! Run with: cargo bench --bench regression
 
-mod regression;
+mod baseline;
 
 use criterion::criterion_main;
 
-criterion_main!(regression::baseline::regression_benches);
+criterion_main!(baseline::regression_benches);

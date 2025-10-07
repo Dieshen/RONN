@@ -10,12 +10,13 @@
 //! Run with: cargo bench --bench integration
 
 use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
-use ronn_api::{Environment, InferenceSession, SessionConfig};
+use ronn_api::{Model, SessionOptions};
 use ronn_core::{DataType, GraphBuilder, ModelGraph, Tensor, TensorLayout};
 use ronn_graph::{
     ConstantFoldingPass, CpuOptimizationPass, DeadCodeEliminationPass, GpuOptimizationPass,
     LayoutOptimizationPass, NodeFusionPass, OptimizationLevel, OptimizationPass, Optimizer,
 };
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// Helper to create test input
@@ -109,33 +110,33 @@ pub fn bench_fusion_impact(c: &mut Criterion) {
 
     // Without fusion (O0)
     group.bench_function("without_fusion", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            optimization_level: OptimizationLevel::O0,
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_optimization_level(OptimizationLevel::O0);
 
-        let session = InferenceSession::new(&env, &model_path, config).unwrap();
+        let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
     // With fusion (O2)
     group.bench_function("with_fusion", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            optimization_level: OptimizationLevel::O2,
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_optimization_level(OptimizationLevel::O2);
 
-        let session = InferenceSession::new(&env, &model_path, config).unwrap();
+        let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
@@ -155,33 +156,33 @@ pub fn bench_layout_optimization_impact(c: &mut Criterion) {
 
     // Without layout optimization
     group.bench_function("without_layout_opt", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            optimization_level: OptimizationLevel::O0,
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_optimization_level(OptimizationLevel::O0);
 
-        let session = InferenceSession::new(&env, &model_path, config).unwrap();
+        let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
     // With layout optimization
     group.bench_function("with_layout_opt", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            optimization_level: OptimizationLevel::O3,
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_optimization_level(OptimizationLevel::O3);
 
-        let session = InferenceSession::new(&env, &model_path, config).unwrap();
+        let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
@@ -254,35 +255,35 @@ pub fn bench_cpu_optimization_impact(c: &mut Criterion) {
 
     // Without CPU-specific optimizations
     group.bench_function("without_cpu_opt", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            preferred_providers: vec![ProviderType::Cpu],
-            optimization_level: OptimizationLevel::O0,
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_provider(ProviderType::CPU)
+            .with_optimization_level(OptimizationLevel::O0);
 
-        let session = InferenceSession::new(&env, &model_path, config).unwrap();
+        let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
     // With CPU-specific optimizations
     group.bench_function("with_cpu_opt", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            preferred_providers: vec![ProviderType::Cpu],
-            optimization_level: OptimizationLevel::O3,
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_provider(ProviderType::CPU)
+            .with_optimization_level(OptimizationLevel::O3);
 
-        let session = InferenceSession::new(&env, &model_path, config).unwrap();
+        let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
@@ -304,14 +305,12 @@ pub fn bench_gpu_optimization_impact(c: &mut Criterion) {
 
     // Without GPU-specific optimizations
     group.bench_function("without_gpu_opt", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            preferred_providers: vec![ProviderType::Gpu],
-            optimization_level: OptimizationLevel::O0,
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_provider(ProviderType::GPU)
+            .with_optimization_level(OptimizationLevel::O0);
 
-        let session = match InferenceSession::new(&env, &model_path, config) {
+        let session = match model.create_session(options) {
             Ok(s) => s,
             Err(_) => {
                 eprintln!("GPU not available, skipping GPU optimization benchmark");
@@ -322,20 +321,20 @@ pub fn bench_gpu_optimization_impact(c: &mut Criterion) {
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
     // With GPU-specific optimizations
     group.bench_function("with_gpu_opt", |b| {
-        let env = Environment::new("benchmark_env").unwrap();
-        let config = SessionConfig {
-            preferred_providers: vec![ProviderType::Gpu],
-            optimization_level: OptimizationLevel::O3,
-            ..Default::default()
-        };
+        let model = Model::load(&model_path).unwrap();
+        let options = SessionOptions::new()
+            .with_provider(ProviderType::GPU)
+            .with_optimization_level(OptimizationLevel::O3);
 
-        let session = match InferenceSession::new(&env, &model_path, config) {
+        let session = match model.create_session(options) {
             Ok(s) => s,
             Err(_) => {
                 eprintln!("GPU not available, skipping GPU optimization benchmark");
@@ -346,7 +345,9 @@ pub fn bench_gpu_optimization_impact(c: &mut Criterion) {
         let input = create_test_input(vec![1, 3, 224, 224]);
 
         b.iter(|| {
-            let _result = session.run(black_box(vec![input.clone()])).unwrap();
+            let mut inputs = HashMap::new();
+            inputs.insert("input", input.clone());
+            let _result = session.run(black_box(inputs)).unwrap();
         });
     });
 
@@ -376,17 +377,17 @@ pub fn bench_optimization_levels_e2e(c: &mut Criterion) {
             BenchmarkId::new("opt_level", format!("{:?}", level)),
             level,
             |b, &level| {
-                let env = Environment::new("benchmark_env").unwrap();
-                let config = SessionConfig {
-                    optimization_level: level,
-                    ..Default::default()
-                };
+                let model = Model::load(&model_path).unwrap();
+                let options = SessionOptions::new()
+                    .with_optimization_level(level);
 
-                let session = InferenceSession::new(&env, &model_path, config).unwrap();
+                let session = model.create_session(options).unwrap();
                 let input = create_test_input(vec![1, 3, 224, 224]);
 
                 b.iter(|| {
-                    let _result = session.run(black_box(vec![input.clone()])).unwrap();
+                    let mut inputs = HashMap::new();
+                    inputs.insert("input", input.clone());
+                    let _result = session.run(black_box(inputs)).unwrap();
                 });
             },
         );
