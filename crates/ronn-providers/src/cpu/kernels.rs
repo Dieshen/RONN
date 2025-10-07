@@ -5,13 +5,13 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use anyhow::{anyhow, Result};
 use rayon::prelude::*;
 use ronn_core::tensor::Tensor;
 use ronn_core::{
-    CompiledKernel, DataType, GraphNode, KernelStats, MemoryUsage, SubGraph, TensorLayout,
+    CompiledKernel, DataType, KernelStats, MemoryUsage, SubGraph, TensorLayout,
 };
 use tracing::{debug, warn};
 

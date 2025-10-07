@@ -5,7 +5,8 @@
       "Bash(cargo check:*)",
       "Bash(cargo test:*)",
       "Bash(tee:*)",
-      "Bash(cargo bench:*)"
+      "Bash(cargo bench:*)",
+      "Bash(cargo build:*)"
     ],
     "deny": [],
     "ask": []

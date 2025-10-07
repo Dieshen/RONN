@@ -96,6 +96,7 @@ struct ResourceUsage {
     /// Current memory usage in bytes.
     current_memory: usize,
     /// Peak memory usage in bytes.
+    #[allow(dead_code)]
     peak_memory: usize,
     /// Number of active inferences.
     active_inferences: usize,
@@ -314,6 +315,7 @@ pub struct SessionManager {
     /// Active sessions storage.
     sessions: DashMap<SessionId, Arc<InferenceSession>>,
     /// Global resource limits.
+    #[allow(dead_code)]
     global_memory_limit: Option<usize>,
     /// Maximum number of concurrent sessions.
     max_sessions: Option<usize>,
