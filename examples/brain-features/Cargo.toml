@@ -15,6 +15,7 @@ rust-version.workspace = true
 ronn-api = { path = "../../crates/ronn-api" }
 ronn-core = { path = "../../crates/ronn-core" }
 ronn-providers = { path = "../../crates/ronn-providers" }
+ronn-hrm = { path = "../../crates/ronn-hrm" }
 tracing-subscriber = { workspace = true }
 
 [lints]

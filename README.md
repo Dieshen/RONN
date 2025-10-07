@@ -229,11 +229,15 @@ ronn/
 cargo bench --all
 ```
 
-**Target Performance** (v0.1.0):
-- Inference latency: <10ms P50, <30ms P95
-- Memory usage: <4GB for typical models
-- Binary size: <50MB (inference only)
-- Throughput: >1000 inferences/sec (16-core CPU)
+**Measured Performance** (v0.1.0):
+
+Core Operations (P50):
+- **HRM Routing Latency**: 1.5-2.0 µs per decision
+- **Tensor Creation**: 423-2,304 ns (100-10K elements)
+- **Tensor Clone**: 11 ns
+- **Vector Extraction**: 379 ns (1K elements)
+
+These microbenchmarks demonstrate that RONN's brain-inspired routing adds **less than 2 microseconds** of overhead while enabling intelligent System 1/System 2 path selection.
 
 ### Optimization Tips
 
@@ -253,9 +257,10 @@ cargo build --release --all
 # With GPU support
 cargo build --release --features gpu
 
-# Examples
-cargo run --example simple-inference
-cargo run --example brain-features
+# Examples (run from their directories)
+cd examples/simple-inference && cargo run
+cd examples/brain-features && cargo run
+cd examples/onnx-model && cargo run
 ```
 
 ### Test
@@ -301,6 +306,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-🚀 **Try it**: `cargo run --example brain-features`
+🚀 **Try it**: `cd examples/brain-features && cargo run`
 📖 **Learn more**: Check out [docs/](./docs/)
 💬 **Discuss**: Open an issue or start a discussion

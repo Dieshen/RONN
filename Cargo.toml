@@ -11,6 +11,9 @@ members = [
     "examples/*",
     "tests/integration"
 ]
+exclude = [
+    "examples/models"
+]
 resolver = "2"
 
 [workspace.package]
@@ -114,6 +117,7 @@ ronn-core = { path = "crates/ronn-core" }
 ronn-graph = { path = "crates/ronn-graph" }
 ronn-providers = { path = "crates/ronn-providers" }
 ronn-onnx = { path = "crates/ronn-onnx" }
+ronn-hrm = { path = "crates/ronn-hrm" }
 
 # Benchmarking
 criterion = { workspace = true }
@@ -137,6 +141,10 @@ default = []
 comparative = ["onnxruntime", "ndarray"]
 
 # Benchmark definitions
+[[bench]]
+name = "core_operations"
+harness = false
+
 [[bench]]
 name = "end_to_end_simple"
 harness = false
