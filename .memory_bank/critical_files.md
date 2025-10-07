@@ -30,16 +30,27 @@
 ## Brain-Inspired Features
 
 ### Hierarchical Reasoning Module (HRM)
-- `examples/brain-features/src/main.rs:137` - Complexity assessment engine
-- `examples/brain-features/src/main.rs:154` - Variance-based complexity heuristics
-- `examples/brain-features/src/main.rs:102` - Fast path routing (System 1 vs System 2)
-- `examples/brain-features/src/main.rs:40` - BitNet vs Full Precision comparison
-- `examples/brain-features/src/main.rs:87` - Adaptive routing demonstration
-- `examples/brain-features/src/main.rs:116` - Performance tradeoff visualization
+- `crates/ronn-hrm/src/complexity.rs` - Complexity assessment engine (scores 0.0-1.0)
+- `crates/ronn-hrm/src/complexity.rs:73` - assess() method with size/variance/dimensionality scoring
+- `crates/ronn-hrm/src/router.rs` - Routing strategies and decision logic
+- `crates/ronn-hrm/src/router.rs:70` - route() method for adaptive routing
+- `crates/ronn-hrm/src/router.rs:103` - adaptive_route() implementation
+- `crates/ronn-hrm/src/executor.rs` - System 1/System 2/Hybrid execution paths
+- `crates/ronn-hrm/src/lib.rs` - Main HRM API and metrics tracking
+- `examples/brain-features/src/main.rs` - Working demo showing all 3 routing paths
 
-### Memory Systems (Scaffolded)
-- `crates/ronn-memory/` - Multi-tier memory system (not implemented)
-- `crates/ronn-learning/` - Continual learning engine (not implemented)
+### Memory Systems (Implemented)
+- `crates/ronn-memory/src/lib.rs` - Multi-tier memory system coordinator
+- `crates/ronn-memory/src/working.rs` - Working memory implementation
+- `crates/ronn-memory/src/episodic.rs` - Episodic memory with temporal indexing
+- `crates/ronn-memory/src/semantic.rs` - Semantic memory knowledge graph
+- `crates/ronn-memory/src/consolidation.rs` - Sleep consolidation engine
+
+### Continual Learning (Implemented)
+- `crates/ronn-learning/src/lib.rs` - Continual learning engine
+- `crates/ronn-learning/src/timescales.rs` - Multi-timescale learning
+- `crates/ronn-learning/src/ewc.rs` - Elastic Weight Consolidation
+- `crates/ronn-learning/src/replay.rs` - Experience replay buffer
 
 ## Execution Providers
 
@@ -98,4 +109,20 @@
 ## CI/CD
 
 ### GitHub Actions
-- `.github/workflows/` - CI/CD pipeline definitions
+- `.github/workflows/ci.yml` - Main CI pipeline (build, test, lint)
+- `.github/workflows/integration-tests.yml` - Integration tests with ONNX models
+- `.github/workflows/benchmarks.yml` - Performance benchmarking
+
+## Testing
+
+### Test Files
+- `crates/ronn-core/src/*/tests.rs` - Core component tests (62 tests)
+- `crates/ronn-hrm/src/*/tests.rs` - HRM tests (22 tests)
+- `crates/ronn-memory/src/*/tests.rs` - Memory system tests (13 tests)
+- `crates/ronn-learning/src/*/tests.rs` - Learning engine tests (16 tests)
+- `crates/ronn-providers/src/*/tests.rs` - Provider tests (62 tests)
+- `crates/ronn-integration-tests/` - Integration tests with ONNX models
+
+### Important Test Patterns
+**Result Type in Tests**: Always use `type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;`
+**Flexible Assertions**: Use `matches!()` for complexity levels that depend on input characteristics
