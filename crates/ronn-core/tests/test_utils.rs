@@ -3,8 +3,8 @@
 //! This module provides common testing utilities, fixtures, and assertion helpers
 //! used across the test suite.
 
-use ronn_core::{DataType, Tensor, TensorLayout};
 use anyhow::Result;
+use ronn_core::{DataType, Tensor, TensorLayout};
 
 /// Create a test tensor with sequential values.
 pub fn create_sequential_tensor(shape: Vec<usize>, dtype: DataType) -> Result<Tensor> {
@@ -39,7 +39,10 @@ pub fn assert_tensor_approx_eq(a: &Tensor, b: &Tensor, epsilon: f32) -> Result<(
         assert!(
             (a_val - b_val).abs() < epsilon,
             "Tensors differ at index {}: {} vs {} (diff: {})",
-            i, a_val, b_val, (a_val - b_val).abs()
+            i,
+            a_val,
+            b_val,
+            (a_val - b_val).abs()
         );
     }
 
@@ -59,7 +62,12 @@ pub fn assert_tensor_all_zeros(tensor: &Tensor) -> Result<()> {
 pub fn assert_tensor_all_ones(tensor: &Tensor) -> Result<()> {
     let data = tensor.to_vec()?;
     for (i, &val) in data.iter().enumerate() {
-        assert!((val - 1.0).abs() < 1e-6, "Non-one value at index {}: {}", i, val);
+        assert!(
+            (val - 1.0).abs() < 1e-6,
+            "Non-one value at index {}: {}",
+            i,
+            val
+        );
     }
     Ok(())
 }
@@ -79,7 +87,9 @@ pub fn assert_tensor_eq(tensor: &Tensor, expected: &[f32]) -> Result<()> {
         assert!(
             (actual - expected).abs() < 1e-5,
             "Value mismatch at index {}: {} vs {}",
-            i, actual, expected
+            i,
+            actual,
+            expected
         );
     }
     Ok(())
@@ -130,7 +140,11 @@ pub fn create_complex_test_graph() -> Result<ronn_core::ModelGraph> {
     builder
         .add_input(conv1_id, "input_tensor")
         .add_output(conv1_id, "conv1_out")
-        .add_attribute(conv1_id, "kernel_size", AttributeValue::IntArray(vec![3, 3]));
+        .add_attribute(
+            conv1_id,
+            "kernel_size",
+            AttributeValue::IntArray(vec![3, 3]),
+        );
 
     let relu1_id = builder.add_op("ReLU", Some("relu1".to_string()));
     builder
@@ -142,7 +156,11 @@ pub fn create_complex_test_graph() -> Result<ronn_core::ModelGraph> {
     builder
         .add_input(conv2_id, "input_tensor")
         .add_output(conv2_id, "conv2_out")
-        .add_attribute(conv2_id, "kernel_size", AttributeValue::IntArray(vec![5, 5]));
+        .add_attribute(
+            conv2_id,
+            "kernel_size",
+            AttributeValue::IntArray(vec![5, 5]),
+        );
 
     let relu2_id = builder.add_op("ReLU", Some("relu2".to_string()));
     builder
@@ -184,12 +202,7 @@ where
 
 /// Generate test shapes for exhaustive testing.
 pub fn test_shapes_1d() -> Vec<Vec<usize>> {
-    vec![
-        vec![1],
-        vec![10],
-        vec![100],
-        vec![1000],
-    ]
+    vec![vec![1], vec![10], vec![100], vec![1000]]
 }
 
 pub fn test_shapes_2d() -> Vec<Vec<usize>> {
@@ -203,11 +216,7 @@ pub fn test_shapes_2d() -> Vec<Vec<usize>> {
 }
 
 pub fn test_shapes_3d() -> Vec<Vec<usize>> {
-    vec![
-        vec![1, 1, 1],
-        vec![2, 3, 4],
-        vec![10, 20, 30],
-    ]
+    vec![vec![1, 1, 1], vec![2, 3, 4], vec![10, 20, 30]]
 }
 
 pub fn test_shapes_4d() -> Vec<Vec<usize>> {
@@ -236,9 +245,5 @@ pub fn test_data_types() -> Vec<DataType> {
 
 /// Common data types for most operations.
 pub fn common_data_types() -> Vec<DataType> {
-    vec![
-        DataType::F32,
-        DataType::F16,
-        DataType::I32,
-    ]
+    vec![DataType::F32, DataType::F16, DataType::I32]
 }

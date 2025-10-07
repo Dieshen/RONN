@@ -1,3 +1,4 @@
+use crate::common::*;
 /// Integration tests for GPT-2 Small text generation model.
 ///
 /// Tests:
@@ -7,9 +8,7 @@
 /// - Accuracy validation against HuggingFace transformers
 /// - Performance benchmarks
 /// - Greedy vs sampling decoding
-
 use std::time::Instant;
-use crate::common::*;
 
 const MODEL_NAME: &str = "gpt2-small.onnx";
 
@@ -52,7 +51,10 @@ fn test_gpt2_load() {
 
     // Validate input
     let input = &model.inputs()[0];
-    println!("  Input: {} {:?} {:?}", input.name, input.shape, input.data_type);
+    println!(
+        "  Input: {} {:?} {:?}",
+        input.name, input.shape, input.data_type
+    );
 
     // Input should be 2D: [batch, sequence_length]
     assert_eq!(
@@ -63,7 +65,10 @@ fn test_gpt2_load() {
 
     // Validate output
     let output = &model.outputs()[0];
-    println!("  Output: {} {:?} {:?}", output.name, output.shape, output.data_type);
+    println!(
+        "  Output: {} {:?} {:?}",
+        output.name, output.shape, output.data_type
+    );
 
     // Output should be 3D: [batch, sequence_length, hidden_size]
     // GPT-2 Small has hidden_size = 768
@@ -84,8 +89,7 @@ fn test_gpt2_single_step_inference() {
     }
 
     let model_path = model_path(MODEL_NAME);
-    let model = ronn_onnx::ModelLoader::load_from_file(&model_path)
-        .expect("Failed to load GPT-2");
+    let model = ronn_onnx::ModelLoader::load_from_file(&model_path).expect("Failed to load GPT-2");
 
     println!("\nRunning single-step inference (next token prediction)...");
 

@@ -48,8 +48,7 @@ pub fn bench_all_providers(c: &mut Criterion) {
             &provider_type,
             |b, provider_type| {
                 let model = Model::load(&model_path).unwrap();
-                let options = SessionOptions::new()
-                    .with_provider(*provider_type);
+                let options = SessionOptions::new().with_provider(*provider_type);
 
                 // Try to create session - skip if provider not available
                 let session = match model.create_session(options) {
@@ -186,8 +185,7 @@ pub fn bench_provider_switching(c: &mut Criterion) {
         b.iter(|| {
             // Create CPU session
             let model = Model::load(&model_path).unwrap();
-            let cpu_options = SessionOptions::new()
-                .with_provider(ProviderType::CPU);
+            let cpu_options = SessionOptions::new().with_provider(ProviderType::CPU);
             let cpu_session = model.create_session(cpu_options).unwrap();
             let mut cpu_inputs = HashMap::new();
             cpu_inputs.insert("input", input.clone());
@@ -195,8 +193,7 @@ pub fn bench_provider_switching(c: &mut Criterion) {
 
             // Create GPU session
             let model = Model::load(&model_path).unwrap();
-            let gpu_options = SessionOptions::new()
-                .with_provider(ProviderType::GPU);
+            let gpu_options = SessionOptions::new().with_provider(ProviderType::GPU);
             if let Ok(gpu_session) = model.create_session(gpu_options) {
                 let mut gpu_inputs = HashMap::new();
                 gpu_inputs.insert("input", input.clone());
@@ -222,14 +219,12 @@ pub fn bench_concurrent_providers(c: &mut Criterion) {
     group.bench_function("cpu_and_gpu_concurrent", |b| {
         // Create CPU session
         let cpu_model = Model::load(&model_path).unwrap();
-        let cpu_options = SessionOptions::new()
-            .with_provider(ProviderType::CPU);
+        let cpu_options = SessionOptions::new().with_provider(ProviderType::CPU);
         let cpu_session = cpu_model.create_session(cpu_options).unwrap();
 
         // Try to create GPU session
         let gpu_model = Model::load(&model_path).unwrap();
-        let gpu_options = SessionOptions::new()
-            .with_provider(ProviderType::GPU);
+        let gpu_options = SessionOptions::new().with_provider(ProviderType::GPU);
         let gpu_session_opt = gpu_model.create_session(gpu_options).ok();
 
         let input = create_test_input(vec![1, 3, 224, 224]);

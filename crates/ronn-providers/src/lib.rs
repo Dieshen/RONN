@@ -55,10 +55,10 @@ pub mod registry;
 // Specialized execution providers
 #[cfg(feature = "bitnet")]
 pub mod bitnet;
-#[cfg(feature = "wasm")]
-pub mod wasm;
 #[cfg(feature = "custom-hardware")]
 pub mod custom;
+#[cfg(feature = "wasm")]
+pub mod wasm;
 
 // Re-export commonly used types and functions
 pub use allocator::{
@@ -75,11 +75,11 @@ pub use cpu::{
     SimdCapabilities,
 };
 pub use gpu::{
-    create_gpu_provider, create_gpu_provider_with_config, CudaCompileOptions,
-    CudaKernelManager, GpuExecutionProvider, GpuMemoryAllocator,
-    MultiGpuMemoryConfig, MultiGpuMemoryManager, SyncStrategy,
-    GpuTopologyManager, TopologyConfig, GpuTopology, PlacementPlan, Workload, WorkloadType,
-    PlacementStrategy, LocalityAwarePlacement, BandwidthOptimizedPlacement, PowerEfficientPlacement,
+    create_gpu_provider, create_gpu_provider_with_config, BandwidthOptimizedPlacement,
+    CudaCompileOptions, CudaKernelManager, GpuExecutionProvider, GpuMemoryAllocator, GpuTopology,
+    GpuTopologyManager, LocalityAwarePlacement, MultiGpuMemoryConfig, MultiGpuMemoryManager,
+    PlacementPlan, PlacementStrategy, PowerEfficientPlacement, SyncStrategy, TopologyConfig,
+    Workload, WorkloadType,
 };
 pub use registry::{ProviderRegistry, RegistryStatistics};
 
@@ -89,19 +89,16 @@ pub use ronn_core::{ExecutionProvider, ProviderType};
 // Specialized provider re-exports
 #[cfg(feature = "bitnet")]
 pub use bitnet::{
-    BitNetExecutionProvider, BitNetProviderConfig, BitNetQuantizer, create_bitnet_provider,
-    BitNetKernel, BitNetOperation, QuantizationMethod, BinaryTensor, TernaryTensor,
-};
-#[cfg(feature = "wasm")]
-pub use wasm::{
-    WasmExecutionProvider, WasmProviderConfig, WasmBridge, create_wasm_provider,
+    create_bitnet_provider, BinaryTensor, BitNetExecutionProvider, BitNetKernel, BitNetOperation,
+    BitNetProviderConfig, BitNetQuantizer, QuantizationMethod, TernaryTensor,
 };
 #[cfg(feature = "custom-hardware")]
 pub use custom::{
-    CustomProviderRegistry, CustomHardwareProvider, HardwareCapability,
-    NpuProvider, NpuConfig, create_npu_provider,
-    TpuProvider, TpuConfig, create_tpu_provider,
+    create_npu_provider, create_tpu_provider, CustomHardwareProvider, CustomProviderRegistry,
+    HardwareCapability, NpuConfig, NpuProvider, TpuConfig, TpuProvider,
 };
+#[cfg(feature = "wasm")]
+pub use wasm::{create_wasm_provider, WasmBridge, WasmExecutionProvider, WasmProviderConfig};
 
 /// Result type alias for provider operations.
 pub type Result<T> = anyhow::Result<T>;

@@ -10,9 +10,7 @@ use std::time::Instant;
 use anyhow::{anyhow, Result};
 use rayon::prelude::*;
 use ronn_core::tensor::Tensor;
-use ronn_core::{
-    CompiledKernel, DataType, KernelStats, MemoryUsage, SubGraph, TensorLayout,
-};
+use ronn_core::{CompiledKernel, DataType, KernelStats, MemoryUsage, SubGraph, TensorLayout};
 use tracing::{debug, warn};
 
 use crate::cpu::simd::{simd_add_f32, simd_matmul_f32, simd_mul_f32, SimdCapabilities};

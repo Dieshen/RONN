@@ -177,12 +177,7 @@ fn test_broadcasting_column_vector() -> Result<()> {
         DataType::F32,
         TensorLayout::RowMajor,
     )?;
-    let b = Tensor::from_data(
-        vec![100.0],
-        vec![1],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    )?;
+    let b = Tensor::from_data(vec![100.0], vec![1], DataType::F32, TensorLayout::RowMajor)?;
 
     let result = a.add(&b)?;
     assert_tensor_eq(&result, &[101.0, 102.0, 103.0, 104.0, 105.0, 106.0])?;
@@ -313,12 +308,7 @@ fn test_relu_activation() -> Result<()> {
 
 #[test]
 fn test_sigmoid_activation() -> Result<()> {
-    let a = Tensor::from_data(
-        vec![0.0],
-        vec![1],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    )?;
+    let a = Tensor::from_data(vec![0.0], vec![1], DataType::F32, TensorLayout::RowMajor)?;
 
     let result = a.sigmoid()?;
     let data = result.to_vec()?;
@@ -328,12 +318,7 @@ fn test_sigmoid_activation() -> Result<()> {
 
 #[test]
 fn test_tanh_activation() -> Result<()> {
-    let a = Tensor::from_data(
-        vec![0.0],
-        vec![1],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    )?;
+    let a = Tensor::from_data(vec![0.0], vec![1], DataType::F32, TensorLayout::RowMajor)?;
 
     let result = a.tanh()?;
     let data = result.to_vec()?;
@@ -378,7 +363,8 @@ fn test_clamp_invalid_range() {
         vec![3],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // min > max should fail
     assert!(a.clamp(10.0, 5.0).is_err());
@@ -391,7 +377,8 @@ fn test_division_by_zero_error() {
         vec![3],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert!(a.div_scalar(0.0).is_err());
 }
@@ -457,10 +444,7 @@ fn test_chained_operations() -> Result<()> {
     )?;
 
     // (a + 5) * 2 - 3
-    let result = a
-        .add_scalar(5.0)?
-        .mul_scalar(2.0)?
-        .sub_scalar(3.0)?;
+    let result = a.add_scalar(5.0)?.mul_scalar(2.0)?.sub_scalar(3.0)?;
 
     assert_tensor_eq(&result, &[9.0, 11.0, 13.0, 15.0])?;
     Ok(())

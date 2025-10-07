@@ -104,12 +104,20 @@ mod tests {
     fn test_compute_importance() -> Result<()> {
         let mut ewc = ElasticWeightConsolidation::new(0.4);
 
-        let task_data = vec![
-            (
-                Tensor::from_data(vec![1.0f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?,
-                Tensor::from_data(vec![0.5f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?,
-            ),
-        ];
+        let task_data = vec![(
+            Tensor::from_data(
+                vec![1.0f32],
+                vec![1, 1],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?,
+            Tensor::from_data(
+                vec![0.5f32],
+                vec![1, 1],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?,
+        )];
 
         ewc.compute_importance(&task_data)?;
 

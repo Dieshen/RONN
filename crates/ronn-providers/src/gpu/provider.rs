@@ -17,8 +17,8 @@ use ronn_core::{
 use tracing::{debug, info, warn};
 
 use super::allocator::create_gpu_allocator;
-use super::cuda_kernels::{CudaKernelManager, CudaCompileOptions};
-use super::memory_manager::{MultiGpuMemoryManager, MultiGpuMemoryConfig};
+use super::cuda_kernels::{CudaCompileOptions, CudaKernelManager};
+use super::memory_manager::{MultiGpuMemoryConfig, MultiGpuMemoryManager};
 use super::topology::{GpuTopologyManager, TopologyConfig};
 
 /// GPU execution provider using Candle backend.
@@ -160,7 +160,10 @@ enum OptimizedPath {
     /// Fused operation sequence.
     Fused(Vec<String>),
     /// Mixed precision path.
-    MixedPrecision { fp16_ops: Vec<String>, fp32_ops: Vec<String> },
+    MixedPrecision {
+        fp16_ops: Vec<String>,
+        fp32_ops: Vec<String>,
+    },
 }
 
 #[derive(Debug, Default)]
@@ -231,28 +234,25 @@ impl MultiGpuManager {
 
         match self.config.load_balancing {
             LoadBalancingStrategy::RoundRobin => {
-                let device_id = self.config.device_ids[self.round_robin_counter % self.config.device_ids.len()];
+                let device_id =
+                    self.config.device_ids[self.round_robin_counter % self.config.device_ids.len()];
                 self.round_robin_counter += 1;
                 device_id
-            },
-            LoadBalancingStrategy::MemoryBased => {
-                self.select_device_by_memory(memory_requirement)
-            },
-            LoadBalancingStrategy::UtilizationBased => {
-                self.select_device_by_utilization()
-            },
-            LoadBalancingStrategy::OperationBased => {
-                self.select_device_by_operation_type(op_type)
-            },
+            }
+            LoadBalancingStrategy::MemoryBased => self.select_device_by_memory(memory_requirement),
+            LoadBalancingStrategy::UtilizationBased => self.select_device_by_utilization(),
+            LoadBalancingStrategy::OperationBased => self.select_device_by_operation_type(op_type),
             LoadBalancingStrategy::CostModel => {
                 self.select_device_by_cost_model(op_type, memory_requirement)
-            },
+            }
         }
     }
 
     /// Select device with the most available memory.
     fn select_device_by_memory(&self, memory_requirement: usize) -> usize {
-        self.config.device_ids.iter()
+        self.config
+            .device_ids
+            .iter()
             .min_by_key(|&&device_id| {
                 self.memory_usage.get(&device_id).unwrap_or(&0) + memory_requirement
             })
@@ -262,11 +262,23 @@ impl MultiGpuManager {
 
     /// Select device with the lowest utilization.
     fn select_device_by_utilization(&self) -> usize {
-        self.config.device_ids.iter()
+        self.config
+            .device_ids
+            .iter()
             .min_by(|&&a, &&b| {
-                let util_a = self.device_stats.get(&a).map(|s| s.utilization).unwrap_or(0.0);
-                let util_b = self.device_stats.get(&b).map(|s| s.utilization).unwrap_or(0.0);
-                util_a.partial_cmp(&util_b).unwrap_or(std::cmp::Ordering::Equal)
+                let util_a = self
+                    .device_stats
+                    .get(&a)
+                    .map(|s| s.utilization)
+                    .unwrap_or(0.0);
+                let util_b = self
+                    .device_stats
+                    .get(&b)
+                    .map(|s| s.utilization)
+                    .unwrap_or(0.0);
+                util_a
+                    .partial_cmp(&util_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .copied()
             .unwrap_or(self.config.primary_device_id)
@@ -277,16 +289,19 @@ impl MultiGpuManager {
         // For now, use simple heuristics
         match op_type {
             // Compute-intensive operations prefer higher-end GPUs (lower device IDs)
-            "MatMul" | "Conv" | "ConvTranspose" => {
-                self.config.device_ids.iter().min().copied().unwrap_or(self.config.primary_device_id)
-            },
+            "MatMul" | "Conv" | "ConvTranspose" => self
+                .config
+                .device_ids
+                .iter()
+                .min()
+                .copied()
+                .unwrap_or(self.config.primary_device_id),
             // Memory-intensive operations prefer GPUs with more available memory
-            "Concat" | "Split" | "Reshape" => {
-                self.select_device_by_memory(0)
-            },
+            "Concat" | "Split" | "Reshape" => self.select_device_by_memory(0),
             // Default to round-robin
             _ => {
-                let device_id = self.config.device_ids[self.round_robin_counter % self.config.device_ids.len()];
+                let device_id =
+                    self.config.device_ids[self.round_robin_counter % self.config.device_ids.len()];
                 device_id
             }
         }
@@ -303,7 +318,8 @@ impl MultiGpuManager {
             let memory_used = self.memory_usage.get(&device_id).unwrap_or(&0);
 
             // Calculate cost score (lower is better)
-            let memory_pressure = (*memory_used + memory_requirement) as f64 / (1024.0 * 1024.0 * 1024.0); // GB
+            let memory_pressure =
+                (*memory_used + memory_requirement) as f64 / (1024.0 * 1024.0 * 1024.0); // GB
             let utilization_penalty = stats.utilization as f64 * 2.0;
             let execution_time_penalty = stats.avg_execution_time / 1000.0; // Convert to ms
 
@@ -319,7 +335,12 @@ impl MultiGpuManager {
     }
 
     /// Update device statistics after operation execution.
-    fn update_device_stats(&mut self, device_id: usize, execution_time_us: u64, memory_used: usize) {
+    fn update_device_stats(
+        &mut self,
+        device_id: usize,
+        execution_time_us: u64,
+        memory_used: usize,
+    ) {
         if let Some(stats) = self.device_stats.get_mut(&device_id) {
             stats.operation_count += 1;
             stats.current_memory = memory_used;
@@ -330,7 +351,8 @@ impl MultiGpuManager {
             if stats.avg_execution_time == 0.0 {
                 stats.avg_execution_time = execution_time_us as f64;
             } else {
-                stats.avg_execution_time = alpha * execution_time_us as f64 + (1.0 - alpha) * stats.avg_execution_time;
+                stats.avg_execution_time =
+                    alpha * execution_time_us as f64 + (1.0 - alpha) * stats.avg_execution_time;
             }
         }
 
@@ -363,14 +385,21 @@ impl GpuExecutionProvider {
             info!("Created GPU device {}: {:?}", device_id, device);
 
             // Create CUDA kernel manager if enabled and device is CUDA
-            let cuda_manager = if config.enable_custom_kernels && matches!(device, Device::Cuda(_)) {
-                match CudaKernelManager::with_options(device.clone(), config.cuda_compile_options.clone()) {
+            let cuda_manager = if config.enable_custom_kernels && matches!(device, Device::Cuda(_))
+            {
+                match CudaKernelManager::with_options(
+                    device.clone(),
+                    config.cuda_compile_options.clone(),
+                ) {
                     Ok(manager) => {
                         info!("Created CUDA kernel manager for device {}", device_id);
                         Some(manager)
-                    },
+                    }
                     Err(e) => {
-                        warn!("Failed to create CUDA kernel manager for device {}: {}", device_id, e);
+                        warn!(
+                            "Failed to create CUDA kernel manager for device {}: {}",
+                            device_id, e
+                        );
                         None
                     }
                 }
@@ -382,8 +411,13 @@ impl GpuExecutionProvider {
             cuda_kernel_managers.push(cuda_manager);
 
             // Create allocator for each device
-            let allocator = create_gpu_allocator()
-                .map_err(|e| anyhow!("Failed to create GPU allocator for device {}: {}", device_id, e))?;
+            let allocator = create_gpu_allocator().map_err(|e| {
+                anyhow!(
+                    "Failed to create GPU allocator for device {}: {}",
+                    device_id,
+                    e
+                )
+            })?;
             allocators.push(allocator);
         }
 
@@ -394,17 +428,18 @@ impl GpuExecutionProvider {
         info!("Created GPU provider with {} devices", devices.len());
 
         // Create multi-GPU manager
-        let device_manager = Arc::new(std::sync::Mutex::new(
-            MultiGpuManager::new(config.clone())
-        ));
+        let device_manager = Arc::new(std::sync::Mutex::new(MultiGpuManager::new(config.clone())));
 
         // Create multi-GPU memory manager if multi-GPU is enabled
         let memory_manager = if config.enable_multi_gpu && config.device_ids.len() > 1 {
-            match MultiGpuMemoryManager::new(config.device_ids.clone(), config.memory_config.clone()) {
+            match MultiGpuMemoryManager::new(
+                config.device_ids.clone(),
+                config.memory_config.clone(),
+            ) {
                 Ok(manager) => {
                     info!("Created multi-GPU memory manager");
                     Some(Arc::new(manager))
-                },
+                }
                 Err(e) => {
                     warn!("Failed to create multi-GPU memory manager: {}", e);
                     None
@@ -425,7 +460,7 @@ impl GpuExecutionProvider {
                         info!("GPU topology discovered successfully");
                     }
                     Some(Arc::new(manager))
-                },
+                }
                 Err(e) => {
                     warn!("Failed to create topology manager: {}", e);
                     None
@@ -663,7 +698,9 @@ impl ExecutionProvider for GpuExecutionProvider {
 
         // Select optimal device for this subgraph using multi-GPU manager
         let mut device_manager = self.device_manager.lock().unwrap();
-        let primary_op = subgraph.nodes.first()
+        let primary_op = subgraph
+            .nodes
+            .first()
             .map(|n| n.op_type.as_str())
             .unwrap_or("Unknown");
 
@@ -673,13 +710,19 @@ impl ExecutionProvider for GpuExecutionProvider {
         let selected_device_id = device_manager.select_device(primary_op, estimated_memory);
 
         // Find the device index in our devices vector
-        let device_index = self.config.device_ids.iter()
+        let device_index = self
+            .config
+            .device_ids
+            .iter()
             .position(|&id| id == selected_device_id)
             .unwrap_or(0);
 
         let selected_device = self.devices[device_index].clone();
 
-        debug!("Selected GPU device {} for subgraph compilation", selected_device_id);
+        debug!(
+            "Selected GPU device {} for subgraph compilation",
+            selected_device_id
+        );
 
         drop(device_manager); // Release lock before kernel creation
 
@@ -687,7 +730,10 @@ impl ExecutionProvider for GpuExecutionProvider {
         let stream_id = selected_device_id % self.config.stream_count;
         let kernel = GpuKernel::with_stream(subgraph, selected_device, stream_id)?;
 
-        debug!("Successfully compiled GPU kernel on device {}", selected_device_id);
+        debug!(
+            "Successfully compiled GPU kernel on device {}",
+            selected_device_id
+        );
 
         Ok(Box::new(kernel))
     }
@@ -749,7 +795,10 @@ impl ExecutionProvider for GpuExecutionProvider {
 impl GpuExecutionProvider {
     /// Get allocator for a specific device.
     pub fn get_device_allocator(&self, device_id: usize) -> Option<Arc<dyn TensorAllocator>> {
-        let device_index = self.config.device_ids.iter()
+        let device_index = self
+            .config
+            .device_ids
+            .iter()
             .position(|&id| id == device_id)?;
         self.allocators.get(device_index).cloned()
     }
@@ -763,7 +812,10 @@ impl GpuExecutionProvider {
     /// Enable or disable multi-GPU support.
     pub fn set_multi_gpu_enabled(&mut self, enabled: bool) {
         self.config.enable_multi_gpu = enabled;
-        info!("Multi-GPU support {}", if enabled { "enabled" } else { "disabled" });
+        info!(
+            "Multi-GPU support {}",
+            if enabled { "enabled" } else { "disabled" }
+        );
     }
 
     /// Set load balancing strategy for multi-GPU execution.
@@ -784,8 +836,14 @@ impl GpuExecutionProvider {
 
     /// Check if custom CUDA kernels are available for a specific device.
     pub fn has_custom_kernels(&self, device_id: usize) -> bool {
-        if let Some(device_index) = self.config.device_ids.iter().position(|&id| id == device_id) {
-            self.cuda_kernel_managers.get(device_index)
+        if let Some(device_index) = self
+            .config
+            .device_ids
+            .iter()
+            .position(|&id| id == device_id)
+        {
+            self.cuda_kernel_managers
+                .get(device_index)
                 .map(|manager| manager.is_some())
                 .unwrap_or(false)
         } else {
@@ -816,13 +874,17 @@ impl GpuExecutionProvider {
         op_type: &str,
         inputs: &[CandleTensor],
     ) -> Result<Option<Vec<CandleTensor>>> {
-        let device_index = self.config.device_ids.iter()
+        let device_index = self
+            .config
+            .device_ids
+            .iter()
             .position(|&id| id == device_id)
             .ok_or_else(|| anyhow!("Device {} not found", device_id))?;
 
         if let Some(Some(ref kernel_manager)) = self.cuda_kernel_managers.get(device_index) {
             // Check if we have a custom kernel for this operation
-            let tensor_shape = inputs.first()
+            let tensor_shape = inputs
+                .first()
                 .map(|t| t.shape().dims().to_vec())
                 .unwrap_or_else(|| vec![1]);
 
@@ -839,7 +901,7 @@ impl GpuExecutionProvider {
                     kernel_manager.execute_kernel(&mut kernel, inputs, &mut outputs)?;
 
                     Ok(Some(outputs))
-                },
+                }
                 Err(_) => {
                     // No custom kernel available for this operation
                     Ok(None)
@@ -863,10 +925,9 @@ impl GpuExecutionProvider {
 
     /// Get custom kernel cache statistics.
     pub fn get_kernel_cache_stats(&self) -> Vec<super::cuda_kernels::CacheStats> {
-        self.cuda_kernel_managers.iter()
-            .filter_map(|manager| {
-                manager.as_ref().map(|km| km.get_cache_stats())
-            })
+        self.cuda_kernel_managers
+            .iter()
+            .filter_map(|manager| manager.as_ref().map(|km| km.get_cache_stats()))
             .collect()
     }
 
@@ -878,7 +939,10 @@ impl GpuExecutionProvider {
     ) -> Result<CandleTensor> {
         if let Some(ref _memory_manager) = self.memory_manager {
             // Use advanced memory manager for optimal transfers
-            info!("Using multi-GPU memory manager for tensor transfer to device {}", target_device_id);
+            info!(
+                "Using multi-GPU memory manager for tensor transfer to device {}",
+                target_device_id
+            );
 
             // In a real implementation, this would:
             // 1. Check if tensor is already on target device
@@ -887,19 +951,21 @@ impl GpuExecutionProvider {
             // 4. Update transfer statistics
 
             // For now, use Candle's built-in transfer
-            let target_device = &self.devices[
-                self.config.device_ids.iter()
-                    .position(|&id| id == target_device_id)
-                    .unwrap_or(0)
-            ];
+            let target_device = &self.devices[self
+                .config
+                .device_ids
+                .iter()
+                .position(|&id| id == target_device_id)
+                .unwrap_or(0)];
             Ok(tensor.to_device(target_device)?)
         } else {
             // Fall back to standard Candle transfer
-            let target_device = &self.devices[
-                self.config.device_ids.iter()
-                    .position(|&id| id == target_device_id)
-                    .unwrap_or(0)
-            ];
+            let target_device = &self.devices[self
+                .config
+                .device_ids
+                .iter()
+                .position(|&id| id == target_device_id)
+                .unwrap_or(0)];
             Ok(tensor.to_device(target_device)?)
         }
     }
@@ -929,7 +995,9 @@ impl GpuExecutionProvider {
     }
 
     /// Get P2P connectivity information between devices.
-    pub fn get_p2p_connectivity(&self) -> HashMap<(usize, usize), super::memory_manager::P2PCapability> {
+    pub fn get_p2p_connectivity(
+        &self,
+    ) -> HashMap<(usize, usize), super::memory_manager::P2PCapability> {
         if let Some(ref memory_manager) = self.memory_manager {
             memory_manager.get_p2p_info()
         } else {
@@ -941,7 +1009,8 @@ impl GpuExecutionProvider {
     pub fn is_p2p_available(&self, src_device: usize, dst_device: usize) -> bool {
         if let Some(ref memory_manager) = self.memory_manager {
             let p2p_info = memory_manager.get_p2p_info();
-            p2p_info.get(&(src_device, dst_device))
+            p2p_info
+                .get(&(src_device, dst_device))
                 .map(|cap| cap.supported)
                 .unwrap_or(false)
         } else {
@@ -1016,7 +1085,9 @@ impl GpuExecutionProvider {
     }
 
     /// Get interconnect information between devices.
-    pub fn get_interconnect_info(&self) -> HashMap<(usize, usize), super::topology::InterconnectLink> {
+    pub fn get_interconnect_info(
+        &self,
+    ) -> HashMap<(usize, usize), super::topology::InterconnectLink> {
         if let Some(ref topology_manager) = self.topology_manager {
             topology_manager.get_topology().links
         } else {
@@ -1025,10 +1096,7 @@ impl GpuExecutionProvider {
     }
 
     /// Automatically select optimal devices for a workload.
-    pub fn auto_select_devices(
-        &self,
-        workload: &super::topology::Workload,
-    ) -> Result<Vec<usize>> {
+    pub fn auto_select_devices(&self, workload: &super::topology::Workload) -> Result<Vec<usize>> {
         let plan = self.optimize_workload_placement(workload, "locality_aware")?;
         Ok(plan.device_assignments.values().copied().collect())
     }
@@ -1225,7 +1293,9 @@ impl GpuKernel {
 
             "Conv" => {
                 if inputs.len() < 2 {
-                    return Err(anyhow!("Conv requires at least 2 inputs (input and weights)"));
+                    return Err(anyhow!(
+                        "Conv requires at least 2 inputs (input and weights)"
+                    ));
                 }
                 let input = &inputs[0];
                 let weights = &inputs[1];
@@ -1251,13 +1321,15 @@ impl GpuKernel {
 
             "BatchNormalization" => {
                 if inputs.len() < 5 {
-                    return Err(anyhow!("BatchNormalization requires 5 inputs: input, scale, bias, mean, var"));
+                    return Err(anyhow!(
+                        "BatchNormalization requires 5 inputs: input, scale, bias, mean, var"
+                    ));
                 }
                 let input = &inputs[0];
-                let scale = &inputs[1];  // gamma
-                let bias = &inputs[2];   // beta
-                let mean = &inputs[3];   // running mean
-                let var = &inputs[4];    // running variance
+                let scale = &inputs[1]; // gamma
+                let bias = &inputs[2]; // beta
+                let mean = &inputs[3]; // running mean
+                let var = &inputs[4]; // running variance
 
                 // BatchNorm formula: (x - mean) / sqrt(var + eps) * scale + bias
                 let eps = 1e-5; // epsilon for numerical stability
@@ -1305,11 +1377,13 @@ impl GpuKernel {
 
             "LayerNormalization" => {
                 if inputs.len() < 3 {
-                    return Err(anyhow!("LayerNormalization requires 3 inputs: input, scale, bias"));
+                    return Err(anyhow!(
+                        "LayerNormalization requires 3 inputs: input, scale, bias"
+                    ));
                 }
                 let input = &inputs[0];
-                let scale = &inputs[1];  // gamma
-                let bias = &inputs[2];   // beta
+                let scale = &inputs[1]; // gamma
+                let bias = &inputs[2]; // beta
 
                 // LayerNorm: normalize over the last dimension(s)
                 let eps = 1e-5;
@@ -1401,15 +1475,28 @@ impl GpuKernel {
 
     /// Check if operation can use mixed precision.
     fn can_use_mixed_precision(&self, op_type: &str) -> bool {
-        matches!(op_type,
-            "Add" | "Sub" | "Mul" | "MatMul" | "Conv" |
-            "ReLU" | "Sigmoid" | "Tanh" | "GELU" |
-            "BatchNormalization" | "LayerNormalization"
+        matches!(
+            op_type,
+            "Add"
+                | "Sub"
+                | "Mul"
+                | "MatMul"
+                | "Conv"
+                | "ReLU"
+                | "Sigmoid"
+                | "Tanh"
+                | "GELU"
+                | "BatchNormalization"
+                | "LayerNormalization"
         )
     }
 
     /// Convert tensors to mixed precision if beneficial.
-    fn apply_mixed_precision(&self, inputs: &[CandleTensor], op_type: &str) -> Result<Vec<CandleTensor>> {
+    fn apply_mixed_precision(
+        &self,
+        inputs: &[CandleTensor],
+        op_type: &str,
+    ) -> Result<Vec<CandleTensor>> {
         if !self.can_use_mixed_precision(op_type) {
             return Ok(inputs.to_vec());
         }
@@ -1443,7 +1530,10 @@ impl GpuKernel {
             if let Some(cached_op) = cache.cached_ops.get_mut(&signature) {
                 cached_op.hit_count += 1;
                 cached_op.last_accessed = std::time::Instant::now();
-                debug!("Cache hit for operation: {} (signature: {})", op_type, signature);
+                debug!(
+                    "Cache hit for operation: {} (signature: {})",
+                    op_type, signature
+                );
             }
         }
 
@@ -1480,7 +1570,11 @@ impl GpuKernel {
 
         for (signature, cached_op) in &cache.cached_ops {
             // Remove entries not accessed in the last 5 minutes
-            if current_time.duration_since(cached_op.last_accessed).as_secs() > 300 {
+            if current_time
+                .duration_since(cached_op.last_accessed)
+                .as_secs()
+                > 300
+            {
                 to_remove.push(signature.clone());
             }
         }
@@ -1539,7 +1633,10 @@ impl CompiledKernel for GpuKernel {
         let mut current_tensors = candle_inputs;
 
         for node in &self.subgraph.nodes {
-            debug!("Executing GPU operation: {} on stream {}", node.op_type, self.stream_id);
+            debug!(
+                "Executing GPU operation: {} on stream {}",
+                node.op_type, self.stream_id
+            );
             let outputs = self.execute_optimized_operation(&node.op_type, &current_tensors)?;
             current_tensors = outputs;
         }
@@ -1775,8 +1872,10 @@ mod tests {
                 assert!(capability.supported_ops.contains("Tanh"));
                 assert!(capability.supported_ops.contains("GELU"));
 
-                println!("✅ GPU provider supports {} complex operations",
-                    capability.supported_ops.len());
+                println!(
+                    "✅ GPU provider supports {} complex operations",
+                    capability.supported_ops.len()
+                );
             }
             Err(e) => {
                 println!("GPU not available: {}", e);
@@ -1829,8 +1928,9 @@ mod tests {
                 let test_input = ronn_core::tensor::Tensor::ones(
                     vec![1024, 1024],
                     DataType::F32,
-                    TensorLayout::RowMajor
-                ).unwrap();
+                    TensorLayout::RowMajor,
+                )
+                .unwrap();
 
                 let start = Instant::now();
                 for _ in 0..10 {
@@ -1848,7 +1948,12 @@ mod tests {
 
         println!("  🧠 Complex Operations Benchmark:");
 
-        let complex_ops = ["Conv", "BatchNormalization", "LayerNormalization", "GlobalAveragePool"];
+        let complex_ops = [
+            "Conv",
+            "BatchNormalization",
+            "LayerNormalization",
+            "GlobalAveragePool",
+        ];
 
         for op in complex_ops {
             let subgraph = create_single_op_subgraph(op);
@@ -1858,13 +1963,15 @@ mod tests {
                     "Conv" => ronn_core::tensor::Tensor::ones(
                         vec![1, 64, 224, 224], // NCHW format
                         DataType::F32,
-                        TensorLayout::RowMajor
-                    ).unwrap(),
+                        TensorLayout::RowMajor,
+                    )
+                    .unwrap(),
                     _ => ronn_core::tensor::Tensor::ones(
                         vec![32, 512],
                         DataType::F32,
-                        TensorLayout::RowMajor
-                    ).unwrap(),
+                        TensorLayout::RowMajor,
+                    )
+                    .unwrap(),
                 };
 
                 let start = Instant::now();
@@ -1906,8 +2013,9 @@ mod tests {
             let test_input = ronn_core::tensor::Tensor::ones(
                 vec![512, 512],
                 DataType::F32,
-                TensorLayout::RowMajor
-            ).unwrap();
+                TensorLayout::RowMajor,
+            )
+            .unwrap();
 
             // Warm up cache
             for _ in 0..5 {
@@ -1934,7 +2042,10 @@ mod tests {
         println!("  🚀 Memory Throughput Benchmark:");
 
         if let Ok((total_memory, _used_memory)) = provider.get_gpu_memory_info() {
-            println!("    GPU Memory: {:.2} GB total", total_memory as f64 / (1024.0 * 1024.0 * 1024.0));
+            println!(
+                "    GPU Memory: {:.2} GB total",
+                total_memory as f64 / (1024.0 * 1024.0 * 1024.0)
+            );
         }
 
         let allocator = provider.get_allocator();
@@ -1985,8 +2096,10 @@ mod tests {
         match GpuExecutionProvider::new() {
             Ok(provider) => {
                 if provider.get_config().stream_count > 1 {
-                    println!("🌊 Testing stream-based execution with {} streams",
-                        provider.get_config().stream_count);
+                    println!(
+                        "🌊 Testing stream-based execution with {} streams",
+                        provider.get_config().stream_count
+                    );
 
                     // Test creating kernels with different streams
                     let subgraph1 = create_single_op_subgraph("Add");
@@ -1994,7 +2107,7 @@ mod tests {
 
                     if let (Ok(kernel1), Ok(kernel2)) = (
                         GpuKernel::with_stream(subgraph1, provider.device().clone(), 0),
-                        GpuKernel::with_stream(subgraph2, provider.device().clone(), 1)
+                        GpuKernel::with_stream(subgraph2, provider.device().clone(), 1),
                     ) {
                         println!("    ✅ Successfully created kernels on different streams");
 
@@ -2002,8 +2115,9 @@ mod tests {
                         let test_input = ronn_core::tensor::Tensor::ones(
                             vec![256, 256],
                             DataType::F32,
-                            TensorLayout::RowMajor
-                        ).unwrap();
+                            TensorLayout::RowMajor,
+                        )
+                        .unwrap();
 
                         let start = std::time::Instant::now();
                         let _result1 = kernel1.execute(&[test_input.clone()]);
@@ -2034,8 +2148,9 @@ mod tests {
                     let test_input = ronn_core::tensor::Tensor::ones(
                         vec![128, 128],
                         DataType::F32,
-                        TensorLayout::RowMajor
-                    ).unwrap();
+                        TensorLayout::RowMajor,
+                    )
+                    .unwrap();
 
                     // Execute multiple times to populate cache
                     for i in 0..10 {

@@ -8,7 +8,7 @@
 use ronn_core::tensor::Tensor;
 use ronn_core::types::{DataType, TensorLayout};
 use ronn_core::NodeAttribute;
-use ronn_onnx::{Conv2dOp, MaxPoolOp, AvgPoolOp, BatchNormOp, OnnxOperator};
+use ronn_onnx::{AvgPoolOp, BatchNormOp, Conv2dOp, MaxPoolOp, OnnxOperator};
 use std::collections::HashMap;
 
 // ============ Conv2D Tests ============
@@ -74,7 +74,10 @@ fn test_conv2d_attributes() {
 
     let mut attributes = HashMap::new();
     attributes.insert("strides".to_string(), NodeAttribute::IntArray(vec![2, 2]));
-    attributes.insert("pads".to_string(), NodeAttribute::IntArray(vec![1, 1, 1, 1]));
+    attributes.insert(
+        "pads".to_string(),
+        NodeAttribute::IntArray(vec![1, 1, 1, 1]),
+    );
     attributes.insert("dilations".to_string(), NodeAttribute::IntArray(vec![1, 1]));
     attributes.insert("group".to_string(), NodeAttribute::Int(1));
 
@@ -122,7 +125,10 @@ fn test_maxpool_with_kernel_shape() {
     let inputs = vec![&input];
 
     let mut attributes = HashMap::new();
-    attributes.insert("kernel_shape".to_string(), NodeAttribute::IntArray(vec![2, 2]));
+    attributes.insert(
+        "kernel_shape".to_string(),
+        NodeAttribute::IntArray(vec![2, 2]),
+    );
 
     let result = op.execute(&inputs, &attributes);
     assert!(result.is_err()); // Not implemented yet
@@ -136,9 +142,15 @@ fn test_maxpool_with_strides_and_pads() {
     let inputs = vec![&input];
 
     let mut attributes = HashMap::new();
-    attributes.insert("kernel_shape".to_string(), NodeAttribute::IntArray(vec![3, 3]));
+    attributes.insert(
+        "kernel_shape".to_string(),
+        NodeAttribute::IntArray(vec![3, 3]),
+    );
     attributes.insert("strides".to_string(), NodeAttribute::IntArray(vec![2, 2]));
-    attributes.insert("pads".to_string(), NodeAttribute::IntArray(vec![1, 1, 1, 1]));
+    attributes.insert(
+        "pads".to_string(),
+        NodeAttribute::IntArray(vec![1, 1, 1, 1]),
+    );
 
     let result = op.execute(&inputs, &attributes);
     assert!(result.is_err());
@@ -182,7 +194,10 @@ fn test_avgpool_with_kernel_shape() {
     let inputs = vec![&input];
 
     let mut attributes = HashMap::new();
-    attributes.insert("kernel_shape".to_string(), NodeAttribute::IntArray(vec![2, 2]));
+    attributes.insert(
+        "kernel_shape".to_string(),
+        NodeAttribute::IntArray(vec![2, 2]),
+    );
 
     let result = op.execute(&inputs, &attributes);
     assert!(result.is_err()); // Not implemented yet
@@ -196,9 +211,15 @@ fn test_avgpool_with_strides_and_pads() {
     let inputs = vec![&input];
 
     let mut attributes = HashMap::new();
-    attributes.insert("kernel_shape".to_string(), NodeAttribute::IntArray(vec![3, 3]));
+    attributes.insert(
+        "kernel_shape".to_string(),
+        NodeAttribute::IntArray(vec![3, 3]),
+    );
     attributes.insert("strides".to_string(), NodeAttribute::IntArray(vec![2, 2]));
-    attributes.insert("pads".to_string(), NodeAttribute::IntArray(vec![0, 0, 0, 0]));
+    attributes.insert(
+        "pads".to_string(),
+        NodeAttribute::IntArray(vec![0, 0, 0, 0]),
+    );
 
     let result = op.execute(&inputs, &attributes);
     assert!(result.is_err());

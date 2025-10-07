@@ -22,11 +22,17 @@ fn test_load_simple_model_onnx() {
             println!("  Initializers: {}", model.initializers().len());
 
             for input in model.inputs() {
-                println!("  Input: {} {:?} {:?}", input.name, input.shape, input.data_type);
+                println!(
+                    "  Input: {} {:?} {:?}",
+                    input.name, input.shape, input.data_type
+                );
             }
 
             for output in model.outputs() {
-                println!("  Output: {} {:?} {:?}", output.name, output.shape, output.data_type);
+                println!(
+                    "  Output: {} {:?} {:?}",
+                    output.name, output.shape, output.data_type
+                );
             }
         }
         Err(e) => {

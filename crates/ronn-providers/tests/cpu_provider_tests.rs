@@ -9,8 +9,8 @@
 
 use anyhow::Result;
 use ronn_core::{
-    DataType, ExecutionProvider, GraphNode, MemoryType, OperatorSpec,
-    PerformanceProfile, ProviderConfig, ProviderId, SubGraph, Tensor, TensorLayout,
+    DataType, ExecutionProvider, GraphNode, MemoryType, OperatorSpec, PerformanceProfile,
+    ProviderConfig, ProviderId, SubGraph, Tensor, TensorLayout,
 };
 use ronn_providers::{
     cpu::{detect_simd_capabilities, CpuExecutionProvider, CpuProviderConfig},
@@ -612,7 +612,10 @@ fn test_operation_cost_estimation() -> Result<()> {
     assert!(add_cost < matmul_cost);
     assert!(matmul_cost < conv_cost);
 
-    println!("Operation costs - Add: {}, MatMul: {}, Conv: {}", add_cost, matmul_cost, conv_cost);
+    println!(
+        "Operation costs - Add: {}, MatMul: {}, Conv: {}",
+        add_cost, matmul_cost, conv_cost
+    );
 
     Ok(())
 }
@@ -659,8 +662,18 @@ fn test_end_to_end_workflow() -> Result<()> {
     let kernel = provider.compile_subgraph(subgraph)?;
 
     // Create tensors
-    let a = Tensor::from_data(vec![1.0, 2.0, 3.0, 4.0], vec![4], DataType::F32, TensorLayout::RowMajor)?;
-    let b = Tensor::from_data(vec![0.5, 1.0, 1.5, 2.0], vec![4], DataType::F32, TensorLayout::RowMajor)?;
+    let a = Tensor::from_data(
+        vec![1.0, 2.0, 3.0, 4.0],
+        vec![4],
+        DataType::F32,
+        TensorLayout::RowMajor,
+    )?;
+    let b = Tensor::from_data(
+        vec![0.5, 1.0, 1.5, 2.0],
+        vec![4],
+        DataType::F32,
+        TensorLayout::RowMajor,
+    )?;
 
     // Execute
     let outputs = kernel.execute(&[a, b])?;

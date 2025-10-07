@@ -1,8 +1,8 @@
 use super::{OnnxOperator, Result};
 use crate::error::OnnxError;
 use ronn_core::ops::ShapeOps;
-use ronn_core::NodeAttribute;
 use ronn_core::tensor::Tensor;
+use ronn_core::NodeAttribute;
 use std::collections::HashMap;
 
 // Reshape: change tensor shape
@@ -250,7 +250,11 @@ impl OnnxOperator for SliceOp {
 }
 
 impl SliceOp {
-    fn get_ints_attr(attrs: &HashMap<String, NodeAttribute>, name: &str, default: Vec<i64>) -> Vec<i64> {
+    fn get_ints_attr(
+        attrs: &HashMap<String, NodeAttribute>,
+        name: &str,
+        default: Vec<i64>,
+    ) -> Vec<i64> {
         if let Some(NodeAttribute::IntArray(v)) = attrs.get(name) {
             v.clone()
         } else {

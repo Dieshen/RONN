@@ -11,7 +11,10 @@ fn test_constant_folding_pass_runs() {
     let pass = ConstantFoldingPass;
 
     let result = pass.run(&mut graph);
-    assert!(result.is_ok(), "Constant folding pass should complete successfully");
+    assert!(
+        result.is_ok(),
+        "Constant folding pass should complete successfully"
+    );
 }
 
 #[test]
@@ -23,7 +26,10 @@ fn test_constant_folding_on_empty_graph() {
     assert!(result.is_ok(), "Should handle empty graph gracefully");
 
     let stats = result.unwrap();
-    assert_eq!(stats.nodes_modified, 0, "Empty graph should have no modifications");
+    assert_eq!(
+        stats.nodes_modified, 0,
+        "Empty graph should have no modifications"
+    );
 }
 
 #[test]
@@ -31,11 +37,17 @@ fn test_constant_folding_preserves_graph_validity() {
     let mut graph = create_constant_graph();
     let pass = ConstantFoldingPass;
 
-    assert!(verify_graph_valid(&graph), "Graph should be valid before optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid before optimization"
+    );
 
     pass.run(&mut graph).unwrap();
 
-    assert!(verify_graph_valid(&graph), "Graph should remain valid after optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should remain valid after optimization"
+    );
 }
 
 #[test]
@@ -82,7 +94,10 @@ fn test_constant_folding_stats() {
     let stats = pass.run(&mut graph).unwrap();
 
     // Verify stats structure is valid
-    assert_eq!(stats.nodes_removed, 0, "Pass should not remove nodes directly");
+    assert_eq!(
+        stats.nodes_removed, 0,
+        "Pass should not remove nodes directly"
+    );
     assert_eq!(stats.nodes_fused, 0, "Pass should not fuse nodes");
     // nodes_modified may be > 0 if constants are found and marked
 }

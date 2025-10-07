@@ -191,7 +191,10 @@ mod tests {
         let metrics = assessor.assess(&tensor)?;
 
         // With 5000 elements and high variance, should be High or at least Medium
-        assert!(matches!(metrics.level, ComplexityLevel::High | ComplexityLevel::Medium));
+        assert!(matches!(
+            metrics.level,
+            ComplexityLevel::High | ComplexityLevel::Medium
+        ));
         assert!(metrics.size > 1000);
         assert!(metrics.complexity_score > 0.4);
 
@@ -240,26 +243,16 @@ mod tests {
 
         // Uniform data = low variance
         let uniform = vec![5.0f32; 10];
-        let tensor1 = Tensor::from_data(
-            uniform,
-            vec![1, 10],
-            DataType::F32,
-            TensorLayout::RowMajor,
-        )
-        .unwrap();
+        let tensor1 =
+            Tensor::from_data(uniform, vec![1, 10], DataType::F32, TensorLayout::RowMajor).unwrap();
 
         let variance1 = assessor.calculate_variance(&tensor1).unwrap();
         assert!(variance1 < 0.001);
 
         // Varied data = high variance
         let varied = vec![1.0f32, 10.0, 1.0, 10.0, 1.0, 10.0];
-        let tensor2 = Tensor::from_data(
-            varied,
-            vec![1, 6],
-            DataType::F32,
-            TensorLayout::RowMajor,
-        )
-        .unwrap();
+        let tensor2 =
+            Tensor::from_data(varied, vec![1, 6], DataType::F32, TensorLayout::RowMajor).unwrap();
 
         let variance2 = assessor.calculate_variance(&tensor2).unwrap();
         assert!(variance2 > 1.0);

@@ -13,9 +13,9 @@ use anyhow::{anyhow, Result};
 use ronn_core::{CompiledKernel, DataType, KernelStats, MemoryUsage, SubGraph, Tensor};
 
 use super::traits::{
-    CustomHardwareProvider, CustomKernel, DeviceMemory, DeviceBuffer, DeviceMemoryInfo,
-    HardwareCapability, PowerProfile, ProviderStats, KernelInfo,
-    HardwareProfiler, ProfilingSession, ProfilingResults, ProfilingSummary,
+    CustomHardwareProvider, CustomKernel, DeviceBuffer, DeviceMemory, DeviceMemoryInfo,
+    HardwareCapability, HardwareProfiler, KernelInfo, PowerProfile, ProfilingResults,
+    ProfilingSession, ProfilingSummary, ProviderStats,
 };
 
 /// Configuration for NPU provider.
@@ -122,7 +122,10 @@ impl NpuProvider {
             features: {
                 let mut features = HashMap::new();
                 features.insert("quantization".to_string(), "int8,int4".to_string());
-                features.insert("sparsity".to_string(), "structured,unstructured".to_string());
+                features.insert(
+                    "sparsity".to_string(),
+                    "structured,unstructured".to_string(),
+                );
                 features.insert("batch_processing".to_string(), "1-32".to_string());
                 features
             },
@@ -272,11 +275,16 @@ impl NpuKernel {
         let compilation_start = Instant::now();
 
         // Simulate kernel compilation
-        let operations: Vec<String> = subgraph.nodes.iter()
+        let operations: Vec<String> = subgraph
+            .nodes
+            .iter()
             .map(|node| node.op_type.clone())
             .collect();
 
-        let name = format!("npu_kernel_{}", subgraph.name.as_deref().unwrap_or("unnamed"));
+        let name = format!(
+            "npu_kernel_{}",
+            subgraph.name.as_deref().unwrap_or("unnamed")
+        );
 
         // Estimate memory usage and execution time based on operations
         let estimated_memory_bytes = operations.len() as u64 * 1024 * 1024; // 1MB per op
@@ -321,22 +329,28 @@ impl CustomKernel for NpuKernel {
         drop(profiler); // Release lock
 
         // Simulate kernel execution
-        let execution_delay = std::time::Duration::from_micros(
-            self.kernel_info.estimated_execution_time_us as u64
-        );
+        let execution_delay =
+            std::time::Duration::from_micros(self.kernel_info.estimated_execution_time_us as u64);
         std::thread::sleep(execution_delay);
 
         // Create dummy output tensors
-        let outputs: Vec<Tensor> = inputs.iter().map(|input| {
-            // For this example, just pass through the input as output
-            input.clone()
-        }).collect();
+        let outputs: Vec<Tensor> = inputs
+            .iter()
+            .map(|input| {
+                // For this example, just pass through the input as output
+                input.clone()
+            })
+            .collect();
 
         // Stop profiling
         let mut profiler = self.profiler.lock().unwrap();
         let _results = profiler.stop_profiling(session)?;
 
-        tracing::debug!("NPU kernel '{}' executed in {:?}", self.name, start_time.elapsed());
+        tracing::debug!(
+            "NPU kernel '{}' executed in {:?}",
+            self.name,
+            start_time.elapsed()
+        );
 
         Ok(outputs)
     }
@@ -431,7 +445,11 @@ impl DeviceMemory for NpuDeviceMemory {
         if buffers.remove(&buffer.handle).is_some() {
             let mut total = self.total_allocated.lock().unwrap();
             *total = total.saturating_sub(buffer.size as u64);
-            tracing::debug!("NPU deallocated {} bytes, handle: {}", buffer.size, buffer.handle);
+            tracing::debug!(
+                "NPU deallocated {} bytes, handle: {}",
+                buffer.size,
+                buffer.handle
+            );
             Ok(())
         } else {
             Err(anyhow!("Invalid NPU buffer handle: {}", buffer.handle))
@@ -534,7 +552,10 @@ impl HardwareProfiler for NpuProfiler {
             energy_consumed_mj: execution_time_us * 20.0 / 1_000_000.0,
             custom_metrics: {
                 let mut metrics = HashMap::new();
-                metrics.insert("npu_ops_per_second".to_string(), 1_000_000.0 / execution_time_us);
+                metrics.insert(
+                    "npu_ops_per_second".to_string(),
+                    1_000_000.0 / execution_time_us,
+                );
                 metrics.insert("npu_cache_hit_rate".to_string(), 0.95);
                 metrics
             },
@@ -558,26 +579,38 @@ impl HardwareProfiler for NpuProfiler {
         }
 
         let total_operations = self.completed_sessions.len() as u64;
-        let total_execution_time_us: f64 = self.completed_sessions.iter()
+        let total_execution_time_us: f64 = self
+            .completed_sessions
+            .iter()
             .map(|r| r.execution_time_us)
             .sum();
         let average_execution_time_us = total_execution_time_us / total_operations as f64;
-        let peak_memory_bytes = self.completed_sessions.iter()
+        let peak_memory_bytes = self
+            .completed_sessions
+            .iter()
             .map(|r| r.memory_usage_bytes)
             .max()
             .unwrap_or(0);
-        let average_utilization: f64 = self.completed_sessions.iter()
+        let average_utilization: f64 = self
+            .completed_sessions
+            .iter()
             .map(|r| r.hardware_utilization)
-            .sum::<f64>() / total_operations as f64;
-        let total_energy_joules: f64 = self.completed_sessions.iter()
+            .sum::<f64>()
+            / total_operations as f64;
+        let total_energy_joules: f64 = self
+            .completed_sessions
+            .iter()
             .map(|r| r.energy_consumed_mj / 1000.0)
             .sum();
 
         // Get top 5 operations by execution time
-        let mut operations_by_time: Vec<(String, f64)> = self.completed_sessions.iter()
+        let mut operations_by_time: Vec<(String, f64)> = self
+            .completed_sessions
+            .iter()
             .map(|r| (r.operation_name.clone(), r.execution_time_us))
             .collect();
-        operations_by_time.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        operations_by_time
+            .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         operations_by_time.truncate(5);
 
         ProfilingSummary {
@@ -647,15 +680,13 @@ mod tests {
 
         let subgraph = SubGraph {
             name: Some("test_subgraph".to_string()),
-            nodes: vec![
-                Node {
-                    name: "conv1".to_string(),
-                    op_type: "Conv2D".to_string(),
-                    inputs: vec!["input".to_string()],
-                    outputs: vec!["conv1_out".to_string()],
-                    attributes: std::collections::HashMap::new(),
-                },
-            ],
+            nodes: vec![Node {
+                name: "conv1".to_string(),
+                op_type: "Conv2D".to_string(),
+                inputs: vec!["input".to_string()],
+                outputs: vec!["conv1_out".to_string()],
+                attributes: std::collections::HashMap::new(),
+            }],
             inputs: vec!["input".to_string()],
             outputs: vec!["conv1_out".to_string()],
         };

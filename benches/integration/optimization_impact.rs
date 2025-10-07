@@ -13,8 +13,7 @@ use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
 use ronn_api::{Model, SessionOptions};
 use ronn_core::{DataType, GraphBuilder, ModelGraph, Tensor, TensorLayout};
 use ronn_graph::{
-    ConstantFoldingPass, CpuOptimizationPass, DeadCodeEliminationPass, GpuOptimizationPass,
-    LayoutOptimizationPass, NodeFusionPass, OptimizationLevel, OptimizationPass, Optimizer,
+    ConstantFoldingPass, DeadCodeEliminationPass, OptimizationLevel, OptimizationPass, Optimizer,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -45,12 +44,8 @@ fn create_constant_heavy_graph() -> ModelGraph {
         .add_input(add_id, "const2_value")
         .add_output(add_id, "const_sum");
 
-    builder
-        .connect(const1_id, add_id, "const1_value")
-        .unwrap();
-    builder
-        .connect(const2_id, add_id, "const2_value")
-        .unwrap();
+    builder.connect(const1_id, add_id, "const1_value").unwrap();
+    builder.connect(const2_id, add_id, "const2_value").unwrap();
 
     // Final operation with input
     let final_id = builder.add_op("Mul", Some("final_mul".to_string()));
@@ -111,8 +106,7 @@ pub fn bench_fusion_impact(c: &mut Criterion) {
     // Without fusion (O0)
     group.bench_function("without_fusion", |b| {
         let model = Model::load(&model_path).unwrap();
-        let options = SessionOptions::new()
-            .with_optimization_level(OptimizationLevel::O0);
+        let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O0);
 
         let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
@@ -127,8 +121,7 @@ pub fn bench_fusion_impact(c: &mut Criterion) {
     // With fusion (O2)
     group.bench_function("with_fusion", |b| {
         let model = Model::load(&model_path).unwrap();
-        let options = SessionOptions::new()
-            .with_optimization_level(OptimizationLevel::O2);
+        let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O2);
 
         let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
@@ -157,8 +150,7 @@ pub fn bench_layout_optimization_impact(c: &mut Criterion) {
     // Without layout optimization
     group.bench_function("without_layout_opt", |b| {
         let model = Model::load(&model_path).unwrap();
-        let options = SessionOptions::new()
-            .with_optimization_level(OptimizationLevel::O0);
+        let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O0);
 
         let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
@@ -173,8 +165,7 @@ pub fn bench_layout_optimization_impact(c: &mut Criterion) {
     // With layout optimization
     group.bench_function("with_layout_opt", |b| {
         let model = Model::load(&model_path).unwrap();
-        let options = SessionOptions::new()
-            .with_optimization_level(OptimizationLevel::O3);
+        let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O3);
 
         let session = model.create_session(options).unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
@@ -378,8 +369,7 @@ pub fn bench_optimization_levels_e2e(c: &mut Criterion) {
             level,
             |b, &level| {
                 let model = Model::load(&model_path).unwrap();
-                let options = SessionOptions::new()
-                    .with_optimization_level(level);
+                let options = SessionOptions::new().with_optimization_level(level);
 
                 let session = model.create_session(options).unwrap();
                 let input = create_test_input(vec![1, 3, 224, 224]);

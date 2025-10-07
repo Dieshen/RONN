@@ -6,8 +6,8 @@ use ronn_core::tensor::Tensor;
 /// Configuration for multi-timescale learning
 #[derive(Debug, Clone)]
 pub struct TimescaleConfig {
-    pub fast_lr: f64,  // Fast weight learning rate
-    pub slow_lr: f64,  // Slow weight learning rate
+    pub fast_lr: f64,            // Fast weight learning rate
+    pub slow_lr: f64,            // Slow weight learning rate
     pub consolidation_rate: f64, // Rate of consolidation from fast to slow
 }
 
@@ -87,8 +87,10 @@ impl MultiTimescaleLearner {
             .map(|x| x * self.config.slow_lr as f32 / self.config.fast_lr as f32)
             .collect();
 
-        let fast_magnitude = fast_delta.iter().map(|x| x.abs() as f64).sum::<f64>() / fast_delta.len() as f64;
-        let slow_magnitude = slow_delta.iter().map(|x| x.abs() as f64).sum::<f64>() / slow_delta.len() as f64;
+        let fast_magnitude =
+            fast_delta.iter().map(|x| x.abs() as f64).sum::<f64>() / fast_delta.len() as f64;
+        let slow_magnitude =
+            slow_delta.iter().map(|x| x.abs() as f64).sum::<f64>() / slow_delta.len() as f64;
 
         Ok(WeightUpdate {
             fast_delta,
@@ -150,8 +152,18 @@ mod tests {
     fn test_compute_update() -> Result<()> {
         let learner = MultiTimescaleLearner::new(TimescaleConfig::default());
 
-        let input = Tensor::from_data(vec![1.0f32, 2.0], vec![1, 2], DataType::F32, TensorLayout::RowMajor)?;
-        let target = Tensor::from_data(vec![0.5f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
+        let input = Tensor::from_data(
+            vec![1.0f32, 2.0],
+            vec![1, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
+        let target = Tensor::from_data(
+            vec![0.5f32],
+            vec![1, 1],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         let update = learner.compute_update(&input, &target)?;
 
@@ -166,8 +178,18 @@ mod tests {
     fn test_apply_update() -> Result<()> {
         let mut learner = MultiTimescaleLearner::new(TimescaleConfig::default());
 
-        let input = Tensor::from_data(vec![1.0f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
-        let target = Tensor::from_data(vec![0.5f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
+        let input = Tensor::from_data(
+            vec![1.0f32],
+            vec![1, 1],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
+        let target = Tensor::from_data(
+            vec![0.5f32],
+            vec![1, 1],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         let update = learner.compute_update(&input, &target)?;
         let applied = learner.apply_update(&update)?;

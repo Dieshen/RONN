@@ -7,7 +7,6 @@
 /// - test_resnet: ResNet-18 image classification
 /// - test_bert: DistilBERT NLP embeddings
 /// - test_gpt: GPT-2 Small text generation
-
 pub mod common;
 
 // Re-export test modules

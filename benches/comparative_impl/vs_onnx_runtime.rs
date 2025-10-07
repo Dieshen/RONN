@@ -50,10 +50,8 @@ fn bench_inference_latency_comparison(c: &mut Criterion) {
     // ONNX Runtime inference
     group.bench_function("onnx_runtime_inference", |b| {
         use onnxruntime::{
-            environment::Environment as OrtEnv,
-            session::Session as OrtSession,
-            tensor::OrtOwnedTensor,
-            GraphOptimizationLevel,
+            environment::Environment as OrtEnv, session::Session as OrtSession,
+            tensor::OrtOwnedTensor, GraphOptimizationLevel,
         };
 
         let ort_env = OrtEnv::builder()
@@ -77,14 +75,11 @@ fn bench_inference_latency_comparison(c: &mut Criterion) {
         let input_data: Vec<f32> = vec![1.0; total_elements];
 
         b.iter(|| {
-            let input_tensor = ndarray::Array::from_shape_vec(
-                input_shape.clone(),
-                input_data.clone(),
-            ).unwrap();
+            let input_tensor =
+                ndarray::Array::from_shape_vec(input_shape.clone(), input_data.clone()).unwrap();
 
-            let _outputs: Vec<OrtOwnedTensor<f32, _>> = session
-                .run(vec![black_box(input_tensor)])
-                .unwrap();
+            let _outputs: Vec<OrtOwnedTensor<f32, _>> =
+                session.run(vec![black_box(input_tensor)]).unwrap();
         });
     });
 
@@ -109,11 +104,9 @@ fn bench_model_loading_comparison(c: &mut Criterion) {
         let config = SessionConfig::default();
 
         b.iter(|| {
-            let _session = InferenceSession::new(
-                &env,
-                black_box(&model_path),
-                black_box(config.clone()),
-            ).unwrap();
+            let _session =
+                InferenceSession::new(&env, black_box(&model_path), black_box(config.clone()))
+                    .unwrap();
         });
     });
 
@@ -168,10 +161,7 @@ fn bench_throughput_comparison(c: &mut Criterion) {
 
     // ONNX Runtime throughput
     group.bench_function("onnx_runtime_throughput", |b| {
-        use onnxruntime::{
-            environment::Environment as OrtEnv,
-            tensor::OrtOwnedTensor,
-        };
+        use onnxruntime::{environment::Environment as OrtEnv, tensor::OrtOwnedTensor};
 
         let ort_env = OrtEnv::builder()
             .with_name("ort_benchmark")
@@ -190,14 +180,12 @@ fn bench_throughput_comparison(c: &mut Criterion) {
 
         b.iter(|| {
             for _ in 0..num_iterations {
-                let input_tensor = ndarray::Array::from_shape_vec(
-                    input_shape.clone(),
-                    input_data.clone(),
-                ).unwrap();
+                let input_tensor =
+                    ndarray::Array::from_shape_vec(input_shape.clone(), input_data.clone())
+                        .unwrap();
 
-                let _outputs: Vec<OrtOwnedTensor<f32, _>> = session
-                    .run(vec![black_box(input_tensor)])
-                    .unwrap();
+                let _outputs: Vec<OrtOwnedTensor<f32, _>> =
+                    session.run(vec![black_box(input_tensor)]).unwrap();
             }
         });
     });
@@ -241,10 +229,7 @@ fn bench_batch_size_comparison(c: &mut Criterion) {
             BenchmarkId::new("onnx_runtime", batch_size),
             batch_size,
             |b, &batch_size| {
-                use onnxruntime::{
-                    environment::Environment as OrtEnv,
-                    tensor::OrtOwnedTensor,
-                };
+                use onnxruntime::{environment::Environment as OrtEnv, tensor::OrtOwnedTensor};
 
                 let ort_env = OrtEnv::builder()
                     .with_name("ort_benchmark")
@@ -262,14 +247,12 @@ fn bench_batch_size_comparison(c: &mut Criterion) {
                 let input_data: Vec<f32> = vec![1.0; total_elements];
 
                 b.iter(|| {
-                    let input_tensor = ndarray::Array::from_shape_vec(
-                        input_shape.clone(),
-                        input_data.clone(),
-                    ).unwrap();
+                    let input_tensor =
+                        ndarray::Array::from_shape_vec(input_shape.clone(), input_data.clone())
+                            .unwrap();
 
-                    let _outputs: Vec<OrtOwnedTensor<f32, _>> = session
-                        .run(vec![black_box(input_tensor)])
-                        .unwrap();
+                    let _outputs: Vec<OrtOwnedTensor<f32, _>> =
+                        session.run(vec![black_box(input_tensor)]).unwrap();
                 });
             },
         );

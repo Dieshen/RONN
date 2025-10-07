@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo bench --package ronn-core
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use ronn_core::{ArithmeticOps, DataType, MatrixOps, ReductionOps, ShapeOps, Tensor, TensorLayout};
 
 fn create_tensor(shape: Vec<usize>) -> Tensor {
@@ -17,21 +17,15 @@ fn bench_arithmetic_operations(c: &mut Criterion) {
         let b = create_tensor(vec![*size]);
 
         group.bench_with_input(BenchmarkId::new("add", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(a.add(&b).unwrap())
-            });
+            bencher.iter(|| black_box(a.add(&b).unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("mul", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(a.mul(&b).unwrap())
-            });
+            bencher.iter(|| black_box(a.mul(&b).unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("add_scalar", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(a.add_scalar(5.0).unwrap())
-            });
+            bencher.iter(|| black_box(a.add_scalar(5.0).unwrap()));
         });
     }
 
@@ -46,15 +40,11 @@ fn bench_matrix_operations(c: &mut Criterion) {
         let b = create_tensor(vec![*size, *size]);
 
         group.bench_with_input(BenchmarkId::new("matmul", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(a.matmul(&b).unwrap())
-            });
+            bencher.iter(|| black_box(a.matmul(&b).unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("transpose", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(a.transpose().unwrap())
-            });
+            bencher.iter(|| black_box(a.transpose().unwrap()));
         });
     }
 
@@ -73,16 +63,12 @@ fn bench_shape_operations(c: &mut Criterion) {
             } else {
                 vec![*size]
             };
-            bencher.iter(|| {
-                black_box(tensor.reshape(&new_shape).unwrap())
-            });
+            bencher.iter(|| black_box(tensor.reshape(&new_shape).unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("flatten", size), size, |bencher, _| {
             let t = create_tensor(vec![size / 10, 10]);
-            bencher.iter(|| {
-                black_box(t.flatten().unwrap())
-            });
+            bencher.iter(|| black_box(t.flatten().unwrap()));
         });
     }
 
@@ -96,21 +82,15 @@ fn bench_reduction_operations(c: &mut Criterion) {
         let tensor = create_tensor(vec![*size]);
 
         group.bench_with_input(BenchmarkId::new("sum_all", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(tensor.sum_all().unwrap())
-            });
+            bencher.iter(|| black_box(tensor.sum_all().unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("mean_all", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(tensor.mean_all().unwrap())
-            });
+            bencher.iter(|| black_box(tensor.mean_all().unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("max_all", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(tensor.max_all().unwrap())
-            });
+            bencher.iter(|| black_box(tensor.max_all().unwrap()));
         });
     }
 
@@ -124,21 +104,15 @@ fn bench_activation_functions(c: &mut Criterion) {
         let tensor = create_tensor(vec![*size]);
 
         group.bench_with_input(BenchmarkId::new("relu", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(tensor.relu().unwrap())
-            });
+            bencher.iter(|| black_box(tensor.relu().unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("sigmoid", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(tensor.sigmoid().unwrap())
-            });
+            bencher.iter(|| black_box(tensor.sigmoid().unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("tanh", size), size, |bencher, _| {
-            bencher.iter(|| {
-                black_box(tensor.tanh().unwrap())
-            });
+            bencher.iter(|| black_box(tensor.tanh().unwrap()));
         });
     }
 
@@ -158,9 +132,7 @@ fn bench_broadcasting(c: &mut Criterion) {
             BenchmarkId::new("broadcast_add", format!("{}x{}", rows, cols)),
             &(rows, cols),
             |bencher, _| {
-                bencher.iter(|| {
-                    black_box(matrix.add(&vector).unwrap())
-                });
+                bencher.iter(|| black_box(matrix.add(&vector).unwrap()));
             },
         );
     }

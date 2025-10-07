@@ -11,7 +11,10 @@ fn test_dead_code_elimination_pass_runs() {
     let pass = DeadCodeEliminationPass;
 
     let result = pass.run(&mut graph);
-    assert!(result.is_ok(), "Dead code elimination pass should complete successfully");
+    assert!(
+        result.is_ok(),
+        "Dead code elimination pass should complete successfully"
+    );
 }
 
 #[test]
@@ -23,7 +26,10 @@ fn test_dead_code_elimination_on_empty_graph() {
     assert!(result.is_ok(), "Should handle empty graph gracefully");
 
     let stats = result.unwrap();
-    assert_eq!(stats.nodes_removed, 0, "Empty graph should have no removals");
+    assert_eq!(
+        stats.nodes_removed, 0,
+        "Empty graph should have no removals"
+    );
 }
 
 #[test]
@@ -60,11 +66,17 @@ fn test_dead_code_elimination_preserves_graph_validity() {
     let mut graph = create_graph_with_dead_code();
     let pass = DeadCodeEliminationPass;
 
-    assert!(verify_graph_valid(&graph), "Graph should be valid before optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid before optimization"
+    );
 
     pass.run(&mut graph).unwrap();
 
-    assert!(verify_graph_valid(&graph), "Graph should remain valid after dead code elimination");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should remain valid after dead code elimination"
+    );
 }
 
 #[test]
@@ -81,8 +93,14 @@ fn test_dead_code_elimination_stats() {
     let stats = pass.run(&mut graph).unwrap();
 
     // Verify stats structure
-    assert_eq!(stats.nodes_fused, 0, "Dead code elimination should not fuse nodes");
-    assert_eq!(stats.nodes_modified, 0, "Dead code elimination should not modify nodes");
+    assert_eq!(
+        stats.nodes_fused, 0,
+        "Dead code elimination should not fuse nodes"
+    );
+    assert_eq!(
+        stats.nodes_modified, 0,
+        "Dead code elimination should not modify nodes"
+    );
     // nodes_removed should be > 0 for graph with dead code
 }
 
@@ -153,12 +171,8 @@ fn test_dead_code_elimination_with_multiple_paths() {
         .add_input(relu_id, "conv1_output")
         .add_output(relu_id, "output_tensor");
 
-    builder
-        .connect(input_id, conv1_id, "input_tensor")
-        .unwrap();
-    builder
-        .connect(conv1_id, relu_id, "conv1_output")
-        .unwrap();
+    builder.connect(input_id, conv1_id, "input_tensor").unwrap();
+    builder.connect(conv1_id, relu_id, "conv1_output").unwrap();
 
     builder
         .set_inputs(vec!["input_tensor".to_string()])

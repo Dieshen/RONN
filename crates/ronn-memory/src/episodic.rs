@@ -1,6 +1,6 @@
 //! Episodic Memory - Experience storage with temporal indexing
 
-use crate::{MemoryId, Result, MemoryError};
+use crate::{MemoryError, MemoryId, Result};
 use ronn_core::tensor::Tensor;
 use std::collections::HashMap;
 
@@ -127,8 +127,8 @@ mod tests {
     use super::*;
     type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
     use super::*;
-    use ronn_core::types::{DataType, TensorLayout};
     use crate::current_timestamp;
+    use ronn_core::types::{DataType, TensorLayout};
 
     #[test]
     fn test_store_and_retrieve() -> Result<()> {
@@ -161,7 +161,8 @@ mod tests {
         // Store episodes at different times
         for i in 0..5 {
             let data = vec![i as f32; 2];
-            let tensor = Tensor::from_data(data, vec![1, 2], DataType::F32, TensorLayout::RowMajor)?;
+            let tensor =
+                Tensor::from_data(data, vec![1, 2], DataType::F32, TensorLayout::RowMajor)?;
 
             let episode = Episode {
                 id: i as MemoryId,

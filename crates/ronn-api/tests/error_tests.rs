@@ -127,7 +127,8 @@ fn test_invalid_input_error_with_tensor_name() {
 
 #[test]
 fn test_provider_error_with_details() {
-    let error = Error::ProviderError("CUDA provider unavailable: CUDA runtime not found".to_string());
+    let error =
+        Error::ProviderError("CUDA provider unavailable: CUDA runtime not found".to_string());
     let display = format!("{}", error);
 
     assert!(display.contains("CUDA"));
@@ -197,9 +198,7 @@ fn test_multiple_error_types() {
 
 #[test]
 fn test_error_can_be_boxed() {
-    let error: Box<dyn std::error::Error> = Box::new(
-        Error::InferenceError("test".to_string())
-    );
+    let error: Box<dyn std::error::Error> = Box::new(Error::InferenceError("test".to_string()));
 
     assert!(error.to_string().contains("Inference failed"));
 }
@@ -233,15 +232,15 @@ fn test_error_messages_are_helpful() {
     let errors = vec![
         (
             Error::ModelLoadError("model.onnx not found".to_string()),
-            vec!["model.onnx", "not found"]
+            vec!["model.onnx", "not found"],
         ),
         (
             Error::InvalidInput("Missing required input: data".to_string()),
-            vec!["Missing", "input", "data"]
+            vec!["Missing", "input", "data"],
         ),
         (
             Error::ProviderError("GPU provider not available".to_string()),
-            vec!["GPU", "provider", "not available"]
+            vec!["GPU", "provider", "not available"],
         ),
     ];
 

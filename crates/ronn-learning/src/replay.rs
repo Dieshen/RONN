@@ -123,8 +123,18 @@ mod tests {
     fn test_store_experience() -> Result<()> {
         let mut replay = ExperienceReplay::new(10, ReplayStrategy::Random);
 
-        let input = Tensor::from_data(vec![1.0f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
-        let target = Tensor::from_data(vec![0.5f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
+        let input = Tensor::from_data(
+            vec![1.0f32],
+            vec![1, 1],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
+        let target = Tensor::from_data(
+            vec![0.5f32],
+            vec![1, 1],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         let exp = Experience {
             input,
@@ -147,8 +157,18 @@ mod tests {
 
         // Add 5 experiences (should evict oldest 2)
         for i in 0..5 {
-            let input = Tensor::from_data(vec![i as f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
-            let target = Tensor::from_data(vec![0.5f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
+            let input = Tensor::from_data(
+                vec![i as f32],
+                vec![1, 1],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?;
+            let target = Tensor::from_data(
+                vec![0.5f32],
+                vec![1, 1],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?;
 
             let exp = Experience {
                 input,
@@ -172,8 +192,18 @@ mod tests {
 
         // Add experiences with varying importance
         for i in 0..5 {
-            let input = Tensor::from_data(vec![i as f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
-            let target = Tensor::from_data(vec![0.5f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
+            let input = Tensor::from_data(
+                vec![i as f32],
+                vec![1, 1],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?;
+            let target = Tensor::from_data(
+                vec![0.5f32],
+                vec![1, 1],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?;
 
             let exp = Experience {
                 input,
@@ -201,8 +231,18 @@ mod tests {
 
         // Add experiences
         for i in 0..5 {
-            let input = Tensor::from_data(vec![i as f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
-            let target = Tensor::from_data(vec![0.5f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
+            let input = Tensor::from_data(
+                vec![i as f32],
+                vec![1, 1],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?;
+            let target = Tensor::from_data(
+                vec![0.5f32],
+                vec![1, 1],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?;
 
             let exp = Experience {
                 input,

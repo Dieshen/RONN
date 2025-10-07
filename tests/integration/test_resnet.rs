@@ -1,3 +1,4 @@
+use crate::common::*;
 /// Integration tests for ResNet-18 image classification model.
 ///
 /// Tests:
@@ -7,9 +8,7 @@
 /// - Accuracy validation against reference implementation
 /// - Performance benchmarks (latency, throughput)
 /// - Different optimization levels
-
 use std::time::Instant;
-use crate::common::*;
 
 const MODEL_NAME: &str = "resnet18.onnx";
 
@@ -53,18 +52,28 @@ fn test_resnet18_load() {
 
     // Validate input shape
     let input = &model.inputs()[0];
-    println!("  Input: {} {:?} {:?}", input.name, input.shape, input.data_type);
+    println!(
+        "  Input: {} {:?} {:?}",
+        input.name, input.shape, input.data_type
+    );
 
     // Expected input: [batch, 3, 224, 224] for ImageNet
     // Note: batch dimension might be dynamic (0 or -1)
-    assert_eq!(input.shape.len(), 4, "Input should have 4 dimensions (NCHW)");
+    assert_eq!(
+        input.shape.len(),
+        4,
+        "Input should have 4 dimensions (NCHW)"
+    );
     assert_eq!(input.shape[1], 3, "Input should have 3 channels (RGB)");
     assert_eq!(input.shape[2], 224, "Input height should be 224");
     assert_eq!(input.shape[3], 224, "Input width should be 224");
 
     // Validate output shape
     let output = &model.outputs()[0];
-    println!("  Output: {} {:?} {:?}", output.name, output.shape, output.data_type);
+    println!(
+        "  Output: {} {:?} {:?}",
+        output.name, output.shape, output.data_type
+    );
 
     // Expected output: [batch, 1000] for ImageNet classes
     assert_eq!(output.shape.len(), 2, "Output should have 2 dimensions");
@@ -81,8 +90,8 @@ fn test_resnet18_inference_random() {
     }
 
     let model_path = model_path(MODEL_NAME);
-    let model = ronn_onnx::ModelLoader::load_from_file(&model_path)
-        .expect("Failed to load ResNet-18");
+    let model =
+        ronn_onnx::ModelLoader::load_from_file(&model_path).expect("Failed to load ResNet-18");
 
     println!("\nRunning inference on random ImageNet-sized input...");
 

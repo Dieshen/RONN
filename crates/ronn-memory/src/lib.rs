@@ -21,19 +21,19 @@
 //!         Semantic Memory (Knowledge Graph, Long-term)
 //! ```
 
-pub mod working;
+pub mod consolidation;
 pub mod episodic;
 pub mod semantic;
-pub mod consolidation;
+pub mod working;
 
+pub use consolidation::{ConsolidationConfig, SleepConsolidation};
+pub use episodic::{Episode, EpisodeQuery, EpisodicMemory};
+pub use semantic::{Concept, ConceptGraph, SemanticMemory};
 pub use working::{WorkingMemory, WorkingMemoryConfig};
-pub use episodic::{EpisodicMemory, Episode, EpisodeQuery};
-pub use semantic::{SemanticMemory, Concept, ConceptGraph};
-pub use consolidation::{SleepConsolidation, ConsolidationConfig};
 
 use ronn_core::tensor::Tensor;
-use thiserror::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
+use thiserror::Error;
 
 /// Errors that can occur in the memory system
 #[derive(Error, Debug)]
@@ -248,7 +248,8 @@ mod tests {
         // Store several items
         for i in 0..5 {
             let data = vec![i as f32; 4];
-            let tensor = Tensor::from_data(data, vec![1, 4], DataType::F32, TensorLayout::RowMajor)?;
+            let tensor =
+                Tensor::from_data(data, vec![1, 4], DataType::F32, TensorLayout::RowMajor)?;
             memory.store(tensor, 0.6)?;
         }
 

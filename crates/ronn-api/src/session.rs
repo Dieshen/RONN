@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 use dashmap::DashMap;
-use ronn_core::ModelGraph;
 use ronn_core::tensor::Tensor;
+use ronn_core::ModelGraph;
 use ronn_graph::{OptimizationLevel, Optimizer};
 use ronn_onnx::LoadedModel;
 use ronn_providers::{ProviderRegistry, ProviderType};
@@ -84,7 +84,10 @@ impl SessionBuilder {
 
     /// Build the inference session
     pub fn build(self) -> Result<InferenceSession> {
-        info!("Building inference session with options: {:?}", self.options);
+        info!(
+            "Building inference session with options: {:?}",
+            self.options
+        );
 
         // Clone the model graph for optimization
         let mut graph = self.model.graph().clone();
@@ -98,8 +101,9 @@ impl SessionBuilder {
             stats.iterations
         );
 
-        // Initialize provider registry
-        let provider_registry = ProviderRegistry::new();
+        // Initialize provider registry with available providers
+        let provider_registry = ronn_providers::create_provider_system()
+            .map_err(|e| Error::ProviderError(format!("Failed to create provider system: {}", e)))?;
 
         // Get the requested provider
         let provider = provider_registry
@@ -260,8 +264,7 @@ impl InferenceSession {
             // Store output tensors
             for (i, tensor) in outputs.into_iter().enumerate() {
                 if i < node.outputs.len() {
-                    self.value_cache
-                        .insert(node.outputs[i].clone(), tensor);
+                    self.value_cache.insert(node.outputs[i].clone(), tensor);
                 }
             }
         }

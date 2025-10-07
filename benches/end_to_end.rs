@@ -12,13 +12,19 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use ronn_api::{Model, SessionOptions};
 use ronn_core::{DataType, Tensor, TensorLayout};
 use ronn_graph::OptimizationLevel;
-use ronn_providers::ProviderType;
+// ProviderType not needed with new Model API
+// use ronn_providers::ProviderType;
 use std::path::PathBuf;
 use std::time::Duration;
 
 /// Helper to create test input tensors
 fn create_test_input(shape: Vec<usize>) -> Tensor {
     Tensor::ones(shape, DataType::F32, TensorLayout::RowMajor).unwrap()
+}
+
+/// Helper to get the first input name from a model
+fn get_first_input_name(model: &Model) -> &str {
+    model.input_names().first().expect("Model should have at least one input")
 }
 
 /// Benchmark full pipeline: Load → Optimize → Execute
@@ -33,7 +39,10 @@ fn bench_full_pipeline(c: &mut Criterion) {
     let model_path = PathBuf::from("crates/ronn-api/tests/fixtures/simple_model.onnx");
 
     if !model_path.exists() {
-        eprintln!("Skipping full_pipeline benchmark: test model not found at {:?}", model_path);
+        eprintln!(
+            "Skipping full_pipeline benchmark: test model not found at {:?}",
+            model_path
+        );
         return;
     }
 
@@ -55,16 +64,16 @@ fn bench_full_pipeline(c: &mut Criterion) {
                     let model = Model::load(black_box(&model_path)).unwrap();
 
                     // Create session with optimization level
-                    let options = SessionOptions::new()
-                        .with_optimization_level(opt_level);
+                    let options = SessionOptions::new().with_optimization_level(opt_level);
                     let session = model.create_session(black_box(options)).unwrap();
 
-                    // Create input
+                    // Create input (use first input name from model)
                     let input = create_test_input(vec![1, 3, 224, 224]);
+                    let input_name = get_first_input_name(&model);
 
                     // Run inference
                     let mut inputs = std::collections::HashMap::new();
-                    inputs.insert("input", input);
+                    inputs.insert(input_name, input);
                     let _result = session.run(black_box(inputs)).unwrap();
                 });
             },
@@ -107,9 +116,9 @@ fn bench_inference_latency(c: &mut Criterion) {
     }
 
     let model = Model::load(&model_path).unwrap();
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O2);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O2);
     let session = model.create_session(options).unwrap();
+    let input_name = get_first_input_name(&model);
 
     // Test different batch sizes
     let batch_sizes = [1, 4, 8, 16, 32];
@@ -125,7 +134,7 @@ fn bench_inference_latency(c: &mut Criterion) {
 
                 b.iter(|| {
                     let mut inputs = std::collections::HashMap::new();
-                    inputs.insert("input", input.clone());
+                    inputs.insert(input_name, input.clone());
                     let _result = session.run(black_box(inputs)).unwrap();
                 });
             },
@@ -150,16 +159,16 @@ fn bench_inference_throughput(c: &mut Criterion) {
     }
 
     let model = Model::load(&model_path).unwrap();
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O3);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O3);
     let session = model.create_session(options).unwrap();
     let input = create_test_input(vec![1, 3, 224, 224]);
+    let input_name = get_first_input_name(&model);
 
     group.bench_function("continuous_inference", |b| {
         b.iter(|| {
             for _ in 0..100 {
                 let mut inputs = std::collections::HashMap::new();
-                inputs.insert("input", input.clone());
+                inputs.insert(input_name, input.clone());
                 let _result = session.run(black_box(inputs)).unwrap();
             }
         });
@@ -181,9 +190,9 @@ fn bench_memory_usage(c: &mut Criterion) {
 
     // Test different tensor sizes to measure memory allocation patterns
     let tensor_sizes = [
-        (1, 3, 64, 64),      // Small
-        (1, 3, 224, 224),    // Medium
-        (1, 3, 512, 512),    // Large
+        (1, 3, 64, 64),   // Small
+        (1, 3, 224, 224), // Medium
+        (1, 3, 512, 512), // Large
     ];
 
     for (i, &(batch, channels, height, width)) in tensor_sizes.iter().enumerate() {
@@ -193,11 +202,12 @@ fn bench_memory_usage(c: &mut Criterion) {
             |b, &(batch, channels, height, width)| {
                 let model = Model::load(&model_path).unwrap();
                 let session = model.create_session_default().unwrap();
+                let input_name = get_first_input_name(&model);
 
                 b.iter(|| {
                     let input = create_test_input(vec![batch, channels, height, width]);
                     let mut inputs = std::collections::HashMap::new();
-                    inputs.insert("input", input);
+                    inputs.insert(input_name, input);
                     let _result = session.run(black_box(inputs)).unwrap();
                 });
             },
@@ -225,8 +235,9 @@ fn bench_cold_vs_warm_start(c: &mut Criterion) {
         b.iter(|| {
             let model = Model::load(black_box(&model_path)).unwrap();
             let session = model.create_session_default().unwrap();
+            let input_name = get_first_input_name(&model);
             let mut inputs = std::collections::HashMap::new();
-            inputs.insert("input", input.clone());
+            inputs.insert(input_name, input.clone());
             let _result = session.run(black_box(inputs)).unwrap();
         });
     });
@@ -236,10 +247,11 @@ fn bench_cold_vs_warm_start(c: &mut Criterion) {
         let model = Model::load(&model_path).unwrap();
         let session = model.create_session_default().unwrap();
         let input = create_test_input(vec![1, 3, 224, 224]);
+        let input_name = get_first_input_name(&model);
 
         b.iter(|| {
             let mut inputs = std::collections::HashMap::new();
-            inputs.insert("input", input.clone());
+            inputs.insert(input_name, input.clone());
             let _result = session.run(black_box(inputs)).unwrap();
         });
     });
@@ -272,8 +284,7 @@ fn bench_optimization_overhead(c: &mut Criterion) {
             |b, &opt_level| {
                 b.iter(|| {
                     let model = Model::load(black_box(&model_path)).unwrap();
-                    let options = SessionOptions::new()
-                        .with_optimization_level(opt_level);
+                    let options = SessionOptions::new().with_optimization_level(opt_level);
                     let _session = model.create_session(black_box(options)).unwrap();
                 });
             },

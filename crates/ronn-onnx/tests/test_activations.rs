@@ -4,9 +4,7 @@
 use ronn_core::tensor::Tensor;
 use ronn_core::types::{DataType, TensorLayout};
 use ronn_core::NodeAttribute;
-use ronn_onnx::{
-    ReluOp, SigmoidOp, TanhOp, SoftmaxOp, GeluOp, OnnxOperator,
-};
+use ronn_onnx::{GeluOp, OnnxOperator, ReluOp, SigmoidOp, SoftmaxOp, TanhOp};
 use std::collections::HashMap;
 
 const EPSILON: f32 = 1e-5;
@@ -19,7 +17,9 @@ fn approx_eq_vec(a: &[f32], b: &[f32], epsilon: f32) -> bool {
     if a.len() != b.len() {
         return false;
     }
-    a.iter().zip(b.iter()).all(|(x, y)| approx_eq(*x, *y, epsilon))
+    a.iter()
+        .zip(b.iter())
+        .all(|(x, y)| approx_eq(*x, *y, epsilon))
 }
 
 #[test]
@@ -28,12 +28,7 @@ fn test_relu_basic() {
 
     // Test with mixed positive and negative values
     let data = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
-    let input = Tensor::from_data(
-        data,
-        vec![5],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![5], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -57,7 +52,8 @@ fn test_relu_all_positive() {
         vec![2, 2],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -74,12 +70,7 @@ fn test_relu_all_negative() {
     let op = ReluOp;
 
     let data = vec![-1.0, -2.0, -3.0, -4.0];
-    let input = Tensor::from_data(
-        data,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -110,12 +101,7 @@ fn test_sigmoid_basic() {
     let op = SigmoidOp;
 
     let data = vec![0.0, 1.0, -1.0, 2.0];
-    let input = Tensor::from_data(
-        data,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -141,12 +127,7 @@ fn test_sigmoid_extreme_values() {
 
     // Test with large positive and negative values
     let data = vec![-10.0, 10.0];
-    let input = Tensor::from_data(
-        data,
-        vec![2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -165,12 +146,7 @@ fn test_tanh_basic() {
     let op = TanhOp;
 
     let data = vec![0.0, 1.0, -1.0, 2.0];
-    let input = Tensor::from_data(
-        data,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -193,12 +169,7 @@ fn test_tanh_extreme_values() {
     let op = TanhOp;
 
     let data = vec![-10.0, 10.0];
-    let input = Tensor::from_data(
-        data,
-        vec![2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -217,12 +188,7 @@ fn test_softmax_1d() {
     let op = SoftmaxOp;
 
     let data = vec![1.0, 2.0, 3.0];
-    let input = Tensor::from_data(
-        data,
-        vec![3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -248,12 +214,7 @@ fn test_softmax_2d_default_axis() {
 
     // 2x3 matrix
     let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-    let input = Tensor::from_data(
-        data,
-        vec![2, 3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![2, 3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -274,12 +235,7 @@ fn test_softmax_with_axis() {
     let op = SoftmaxOp;
 
     let data = vec![1.0, 2.0, 3.0, 4.0];
-    let input = Tensor::from_data(
-        data,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let mut attributes = HashMap::new();
@@ -298,12 +254,7 @@ fn test_softmax_numerical_stability() {
 
     // Large values that could cause overflow without proper implementation
     let data = vec![1000.0, 1001.0, 1002.0];
-    let input = Tensor::from_data(
-        data,
-        vec![3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -321,12 +272,7 @@ fn test_gelu_basic() {
     let op = GeluOp;
 
     let data = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
-    let input = Tensor::from_data(
-        data,
-        vec![5],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![5], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -352,12 +298,8 @@ fn test_gelu_properties() {
     let op = GeluOp;
 
     let data = vec![0.0, 0.5, 1.0, 1.5, 2.0, 3.0];
-    let input = Tensor::from_data(
-        data.clone(),
-        vec![6],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input =
+        Tensor::from_data(data.clone(), vec![6], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = HashMap::new();
@@ -395,22 +337,14 @@ fn test_gelu_wrong_input_count() {
 #[test]
 fn test_activations_preserve_shape() {
     // Test that all activations preserve input shape
-    let shapes = vec![
-        vec![5],
-        vec![2, 3],
-        vec![2, 3, 4],
-    ];
+    let shapes = vec![vec![5], vec![2, 3], vec![2, 3, 4]];
 
     for shape in shapes {
         let size: usize = shape.iter().product();
         let data: Vec<f32> = (0..size).map(|i| i as f32 * 0.1).collect();
 
-        let input = Tensor::from_data(
-            data,
-            shape.clone(),
-            DataType::F32,
-            TensorLayout::RowMajor,
-        ).unwrap();
+        let input =
+            Tensor::from_data(data, shape.clone(), DataType::F32, TensorLayout::RowMajor).unwrap();
 
         let inputs = vec![&input];
         let attributes = HashMap::new();

@@ -7,12 +7,12 @@
 //! - Load balancing strategies
 //! - Synchronization overhead measurements
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use ronn_core::{DataType, Tensor, TensorLayout, SubGraph, GraphNode};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use ronn_core::{DataType, GraphNode, SubGraph, Tensor, TensorLayout};
 use ronn_providers::{
-    create_gpu_provider, GpuExecutionProvider, MultiGpuMemoryManager, MultiGpuMemoryConfig,
-    SyncStrategy, CudaKernelManager, GpuTopologyManager, TopologyConfig, Workload, WorkloadType,
-    LocalityAwarePlacement, BandwidthOptimizedPlacement, PowerEfficientPlacement
+    create_gpu_provider, BandwidthOptimizedPlacement, CudaKernelManager, GpuExecutionProvider,
+    GpuTopologyManager, LocalityAwarePlacement, MultiGpuMemoryConfig, MultiGpuMemoryManager,
+    PowerEfficientPlacement, SyncStrategy, TopologyConfig, Workload, WorkloadType,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -20,12 +20,12 @@ use std::time::Instant;
 
 /// Benchmark data sizes for testing
 const BENCHMARK_SIZES: &[usize] = &[
-    1024,      // 1KB
-    1024 * 16, // 16KB
-    1024 * 64, // 64KB
-    1024 * 256, // 256KB
-    1024 * 1024, // 1MB
-    1024 * 1024 * 4, // 4MB
+    1024,             // 1KB
+    1024 * 16,        // 16KB
+    1024 * 64,        // 64KB
+    1024 * 256,       // 256KB
+    1024 * 1024,      // 1MB
+    1024 * 1024 * 4,  // 4MB
     1024 * 1024 * 16, // 16MB
     1024 * 1024 * 64, // 64MB
 ];
@@ -51,9 +51,7 @@ fn bench_memory_transfers(c: &mut Criterion) {
         enable_memory_prefetching: true,
     };
 
-    let memory_manager = rt.block_on(async {
-        MultiGpuMemoryManager::new(config).await
-    });
+    let memory_manager = rt.block_on(async { MultiGpuMemoryManager::new(config).await });
 
     if memory_manager.is_err() {
         println!("Failed to create multi-GPU memory manager, skipping benchmarks");
@@ -75,12 +73,20 @@ fn bench_memory_transfers(c: &mut Criterion) {
                 b.iter(|| {
                     let tensor = rt.block_on(async {
                         let data = vec![1.0f32; elements];
-                        let tensor = Tensor::from_data(data, vec![elements], DataType::F32, TensorLayout::RowMajor).unwrap();
-                        memory_manager.allocate_on_device(black_box(tensor), 0).await
+                        let tensor = Tensor::from_data(
+                            data,
+                            vec![elements],
+                            DataType::F32,
+                            TensorLayout::RowMajor,
+                        )
+                        .unwrap();
+                        memory_manager
+                            .allocate_on_device(black_box(tensor), 0)
+                            .await
                     });
                     black_box(tensor)
                 });
-            }
+            },
         );
 
         // Multi-device distribution benchmark
@@ -91,33 +97,52 @@ fn bench_memory_transfers(c: &mut Criterion) {
                 b.iter(|| {
                     let result = rt.block_on(async {
                         let data = vec![1.0f32; elements];
-                        let tensor = Tensor::from_data(data, vec![elements], DataType::F32, TensorLayout::RowMajor).unwrap();
-                        memory_manager.distribute_tensor(black_box(tensor), &[0, 1]).await
+                        let tensor = Tensor::from_data(
+                            data,
+                            vec![elements],
+                            DataType::F32,
+                            TensorLayout::RowMajor,
+                        )
+                        .unwrap();
+                        memory_manager
+                            .distribute_tensor(black_box(tensor), &[0, 1])
+                            .await
                     });
                     black_box(result)
                 });
-            }
+            },
         );
 
         // Peer-to-peer transfer benchmark
-        if rt.block_on(memory_manager.can_access_peer(0, 1)).unwrap_or(false) {
+        if rt
+            .block_on(memory_manager.can_access_peer(0, 1))
+            .unwrap_or(false)
+        {
             group.bench_with_input(
                 BenchmarkId::new("p2p_transfer", size),
                 &elements,
                 |b, &elements| {
                     let data = vec![1.0f32; elements];
-                    let tensor = Tensor::from_data(data, vec![elements], DataType::F32, TensorLayout::RowMajor).unwrap();
-                    let device_tensor = rt.block_on(async {
-                        memory_manager.allocate_on_device(tensor, 0).await
-                    }).unwrap();
+                    let tensor = Tensor::from_data(
+                        data,
+                        vec![elements],
+                        DataType::F32,
+                        TensorLayout::RowMajor,
+                    )
+                    .unwrap();
+                    let device_tensor = rt
+                        .block_on(async { memory_manager.allocate_on_device(tensor, 0).await })
+                        .unwrap();
 
                     b.iter(|| {
                         let result = rt.block_on(async {
-                            memory_manager.transfer_between_devices(&device_tensor, 0, black_box(1)).await
+                            memory_manager
+                                .transfer_between_devices(&device_tensor, 0, black_box(1))
+                                .await
                         });
                         black_box(result)
                     });
-                }
+                },
             );
         }
 
@@ -129,11 +154,13 @@ fn bench_memory_transfers(c: &mut Criterion) {
                 b.iter(|| {
                     let result = rt.block_on(async {
                         let devices = vec![0, 1];
-                        memory_manager.synchronize_devices(black_box(&devices)).await
+                        memory_manager
+                            .synchronize_devices(black_box(&devices))
+                            .await
                     });
                     black_box(result)
                 });
-            }
+            },
         );
     }
 
@@ -170,8 +197,12 @@ fn bench_cuda_kernels(c: &mut Criterion) {
         }
     "#;
 
-    let simple_compiled = kernel_manager.compile_kernel(simple_kernel, "vector_add", &Default::default()).unwrap();
-    let fused_compiled = kernel_manager.compile_kernel(fused_kernel, "vector_add_mul", &Default::default()).unwrap();
+    let simple_compiled = kernel_manager
+        .compile_kernel(simple_kernel, "vector_add", &Default::default())
+        .unwrap();
+    let fused_compiled = kernel_manager
+        .compile_kernel(fused_kernel, "vector_add_mul", &Default::default())
+        .unwrap();
 
     let mut group = c.benchmark_group("cuda_kernels");
 
@@ -200,7 +231,7 @@ fn bench_cuda_kernels(c: &mut Criterion) {
                     );
                     black_box(result)
                 });
-            }
+            },
         );
 
         // Fused kernel benchmark
@@ -227,7 +258,7 @@ fn bench_cuda_kernels(c: &mut Criterion) {
                     );
                     black_box(result)
                 });
-            }
+            },
         );
     }
 
@@ -261,8 +292,15 @@ fn bench_topology_placement(c: &mut Criterion) {
     }
 
     let placement_strategies = vec![
-        ("locality_aware", Box::new(LocalityAwarePlacement::new()) as Box<dyn ronn_providers::PlacementStrategy + Send + Sync>),
-        ("bandwidth_optimized", Box::new(BandwidthOptimizedPlacement::new())),
+        (
+            "locality_aware",
+            Box::new(LocalityAwarePlacement::new())
+                as Box<dyn ronn_providers::PlacementStrategy + Send + Sync>,
+        ),
+        (
+            "bandwidth_optimized",
+            Box::new(BandwidthOptimizedPlacement::new()),
+        ),
         ("power_efficient", Box::new(PowerEfficientPlacement::new())),
     ];
 
@@ -270,47 +308,51 @@ fn bench_topology_placement(c: &mut Criterion) {
 
     // Different workload types for testing
     let workloads = vec![
-        ("compute_intensive", Workload {
-            id: "compute_test".to_string(),
-            workload_type: WorkloadType::ComputeIntensive,
-            estimated_compute_ops: 1_000_000,
-            estimated_memory_usage: 256 * 1024 * 1024, // 256MB
-            communication_pattern: ronn_providers::CommunicationPattern::AllToAll,
-            priority: 1.0,
-        }),
-        ("memory_bound", Workload {
-            id: "memory_test".to_string(),
-            workload_type: WorkloadType::MemoryBound,
-            estimated_compute_ops: 10_000,
-            estimated_memory_usage: 1024 * 1024 * 1024, // 1GB
-            communication_pattern: ronn_providers::CommunicationPattern::Broadcast,
-            priority: 1.0,
-        }),
-        ("communication_heavy", Workload {
-            id: "comm_test".to_string(),
-            workload_type: WorkloadType::CommunicationHeavy,
-            estimated_compute_ops: 100_000,
-            estimated_memory_usage: 128 * 1024 * 1024, // 128MB
-            communication_pattern: ronn_providers::CommunicationPattern::Ring,
-            priority: 1.0,
-        }),
+        (
+            "compute_intensive",
+            Workload {
+                id: "compute_test".to_string(),
+                workload_type: WorkloadType::ComputeIntensive,
+                estimated_compute_ops: 1_000_000,
+                estimated_memory_usage: 256 * 1024 * 1024, // 256MB
+                communication_pattern: ronn_providers::CommunicationPattern::AllToAll,
+                priority: 1.0,
+            },
+        ),
+        (
+            "memory_bound",
+            Workload {
+                id: "memory_test".to_string(),
+                workload_type: WorkloadType::MemoryBound,
+                estimated_compute_ops: 10_000,
+                estimated_memory_usage: 1024 * 1024 * 1024, // 1GB
+                communication_pattern: ronn_providers::CommunicationPattern::Broadcast,
+                priority: 1.0,
+            },
+        ),
+        (
+            "communication_heavy",
+            Workload {
+                id: "comm_test".to_string(),
+                workload_type: WorkloadType::CommunicationHeavy,
+                estimated_compute_ops: 100_000,
+                estimated_memory_usage: 128 * 1024 * 1024, // 128MB
+                communication_pattern: ronn_providers::CommunicationPattern::Ring,
+                priority: 1.0,
+            },
+        ),
     ];
 
     for (strategy_name, strategy) in placement_strategies {
         for (workload_name, workload) in &workloads {
-            group.bench_function(
-                &format!("{}_{}", strategy_name, workload_name),
-                |b| {
-                    b.iter(|| {
-                        let topology = rt.block_on(topology_manager.get_topology()).unwrap();
-                        let plan = strategy.create_placement_plan(
-                            black_box(workload),
-                            black_box(&topology),
-                        );
-                        black_box(plan)
-                    });
-                }
-            );
+            group.bench_function(&format!("{}_{}", strategy_name, workload_name), |b| {
+                b.iter(|| {
+                    let topology = rt.block_on(topology_manager.get_topology()).unwrap();
+                    let plan =
+                        strategy.create_placement_plan(black_box(workload), black_box(&topology));
+                    black_box(plan)
+                });
+            });
         }
     }
 
@@ -360,7 +402,11 @@ fn bench_end_to_end_execution(c: &mut Criterion) {
             },
         ],
         edges: vec![],
-        inputs: vec!["input1".to_string(), "input2".to_string(), "input3".to_string()],
+        inputs: vec![
+            "input1".to_string(),
+            "input2".to_string(),
+            "input3".to_string(),
+        ],
         outputs: vec!["output1".to_string()],
     };
 
@@ -374,18 +420,23 @@ fn bench_end_to_end_execution(c: &mut Criterion) {
             BenchmarkId::new("single_gpu_execution", size),
             &size,
             |b, &size| {
-                let input1 = Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor).unwrap();
-                let input2 = Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor).unwrap();
-                let input3 = Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor).unwrap();
+                let input1 =
+                    Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor).unwrap();
+                let input2 =
+                    Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor).unwrap();
+                let input3 =
+                    Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor).unwrap();
                 let inputs = vec![input1, input2, input3];
 
                 b.iter(|| {
                     let result = rt.block_on(async {
-                        provider.execute_subgraph(black_box(&subgraph), black_box(&inputs)).await
+                        provider
+                            .execute_subgraph(black_box(&subgraph), black_box(&inputs))
+                            .await
                     });
                     black_box(result)
                 });
-            }
+            },
         );
 
         // Multi-GPU execution with topology optimization
@@ -398,31 +449,44 @@ fn bench_end_to_end_execution(c: &mut Criterion) {
                         id: format!("benchmark_{}", size),
                         workload_type: WorkloadType::ComputeIntensive,
                         estimated_compute_ops: (size * size * size) as u64,
-                        estimated_memory_usage: (size * size * std::mem::size_of::<f32>() * 3) as u64,
-                        communication_pattern: ronn_providers::CommunicationPattern::PipelineParallel,
+                        estimated_memory_usage: (size * size * std::mem::size_of::<f32>() * 3)
+                            as u64,
+                        communication_pattern:
+                            ronn_providers::CommunicationPattern::PipelineParallel,
                         priority: 1.0,
                     };
 
-                    let input1 = Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor).unwrap();
-                    let input2 = Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor).unwrap();
-                    let input3 = Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor).unwrap();
+                    let input1 =
+                        Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor)
+                            .unwrap();
+                    let input2 =
+                        Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor)
+                            .unwrap();
+                    let input3 =
+                        Tensor::ones(vec![size, size], DataType::F32, TensorLayout::RowMajor)
+                            .unwrap();
                     let inputs = vec![input1, input2, input3];
 
                     b.iter(|| {
                         let result = rt.block_on(async {
                             // First optimize placement
-                            let devices = provider.auto_select_devices(black_box(&workload)).await.unwrap_or(vec![0]);
+                            let devices = provider
+                                .auto_select_devices(black_box(&workload))
+                                .await
+                                .unwrap_or(vec![0]);
 
                             // Then execute with optimized placement
-                            provider.execute_subgraph_on_devices(
-                                black_box(&subgraph),
-                                black_box(&inputs),
-                                black_box(&devices)
-                            ).await
+                            provider
+                                .execute_subgraph_on_devices(
+                                    black_box(&subgraph),
+                                    black_box(&inputs),
+                                    black_box(&devices),
+                                )
+                                .await
                         });
                         black_box(result)
                     });
-                }
+                },
             );
         }
     }
@@ -445,27 +509,32 @@ fn bench_load_balancing(c: &mut Criterion) {
     let mut group = c.benchmark_group("load_balancing");
 
     // Create multiple concurrent workloads
-    let workloads = (0..8).map(|i| {
-        Workload {
-            id: format!("workload_{}", i),
-            workload_type: match i % 3 {
-                0 => WorkloadType::ComputeIntensive,
-                1 => WorkloadType::MemoryBound,
-                _ => WorkloadType::CommunicationHeavy,
-            },
-            estimated_compute_ops: 100_000 * (i + 1) as u64,
-            estimated_memory_usage: 64 * 1024 * 1024 * (i + 1) as u64, // 64MB * (i+1)
-            communication_pattern: ronn_providers::CommunicationPattern::AllToAll,
-            priority: (i + 1) as f32 / 8.0,
-        }
-    }).collect::<Vec<_>>();
+    let workloads = (0..8)
+        .map(|i| {
+            Workload {
+                id: format!("workload_{}", i),
+                workload_type: match i % 3 {
+                    0 => WorkloadType::ComputeIntensive,
+                    1 => WorkloadType::MemoryBound,
+                    _ => WorkloadType::CommunicationHeavy,
+                },
+                estimated_compute_ops: 100_000 * (i + 1) as u64,
+                estimated_memory_usage: 64 * 1024 * 1024 * (i + 1) as u64, // 64MB * (i+1)
+                communication_pattern: ronn_providers::CommunicationPattern::AllToAll,
+                priority: (i + 1) as f32 / 8.0,
+            }
+        })
+        .collect::<Vec<_>>();
 
     // Sequential execution benchmark
     group.bench_function("sequential_execution", |b| {
         b.iter(|| {
             rt.block_on(async {
                 for workload in black_box(&workloads) {
-                    let devices = provider.auto_select_devices(workload).await.unwrap_or(vec![0]);
+                    let devices = provider
+                        .auto_select_devices(workload)
+                        .await
+                        .unwrap_or(vec![0]);
                     black_box(devices);
                 }
             });
@@ -476,12 +545,18 @@ fn bench_load_balancing(c: &mut Criterion) {
     group.bench_function("concurrent_load_balancing", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let tasks = workloads.iter().map(|workload| {
-                    let provider = provider.clone();
-                    tokio::spawn(async move {
-                        provider.auto_select_devices(workload).await.unwrap_or(vec![0])
+                let tasks = workloads
+                    .iter()
+                    .map(|workload| {
+                        let provider = provider.clone();
+                        tokio::spawn(async move {
+                            provider
+                                .auto_select_devices(workload)
+                                .await
+                                .unwrap_or(vec![0])
+                        })
                     })
-                }).collect::<Vec<_>>();
+                    .collect::<Vec<_>>();
 
                 let results = futures::future::join_all(tasks).await;
                 black_box(results);

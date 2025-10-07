@@ -265,7 +265,10 @@ mod tests {
         let decision = router.route(&metrics)?;
 
         // Should route to System1 or System2 (medium-high complexity)
-        assert!(matches!(decision.path, ExecutionPath::System1 | ExecutionPath::System2));
+        assert!(matches!(
+            decision.path,
+            ExecutionPath::System1 | ExecutionPath::System2
+        ));
 
         Ok(())
     }
@@ -297,7 +300,12 @@ mod tests {
         let mut router = HRMRouter::new(RoutingStrategy::AdaptiveComplexity);
 
         // Route several inputs
-        let small = Tensor::from_data(vec![1.0f32; 10], vec![1, 10], DataType::F32, TensorLayout::RowMajor)?;
+        let small = Tensor::from_data(
+            vec![1.0f32; 10],
+            vec![1, 10],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
         let large = Tensor::from_data(
             (0..2000).map(|x| x as f32).collect(),
             vec![1, 2000],

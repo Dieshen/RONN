@@ -66,9 +66,7 @@ fn test_two_disconnected_subgraphs() {
         .add_input(conv1_id, "output1")
         .add_output(conv1_id, "conv1_out");
 
-    builder
-        .connect(input1_id, conv1_id, "output1")
-        .unwrap();
+    builder.connect(input1_id, conv1_id, "output1").unwrap();
 
     // Second subgraph (disconnected from first)
     let input2_id = builder.add_op("Input", Some("input2".to_string()));
@@ -79,9 +77,7 @@ fn test_two_disconnected_subgraphs() {
         .add_input(conv2_id, "output2")
         .add_output(conv2_id, "conv2_out");
 
-    builder
-        .connect(input2_id, conv2_id, "output2")
-        .unwrap();
+    builder.connect(input2_id, conv2_id, "output2").unwrap();
 
     builder
         .set_inputs(vec!["output1".to_string(), "output2".to_string()])
@@ -91,10 +87,7 @@ fn test_two_disconnected_subgraphs() {
     let optimizer = Optimizer::new(OptimizationLevel::O2);
 
     let result = optimizer.optimize(&mut graph);
-    assert!(
-        result.is_ok(),
-        "Should handle disconnected subgraphs"
-    );
+    assert!(result.is_ok(), "Should handle disconnected subgraphs");
 }
 
 // Cyclic graph tests (should fail validation)
@@ -114,12 +107,8 @@ fn test_cyclic_graph_validation_fails() {
         .add_input(node_b_id, "a_out")
         .add_output(node_b_id, "b_out");
 
-    builder
-        .connect(node_a_id, node_b_id, "a_out")
-        .unwrap();
-    builder
-        .connect(node_b_id, node_a_id, "b_out")
-        .unwrap();
+    builder.connect(node_a_id, node_b_id, "a_out").unwrap();
+    builder.connect(node_b_id, node_a_id, "b_out").unwrap();
 
     builder
         .set_inputs(vec![])
@@ -233,9 +222,7 @@ fn test_wide_graph_many_parallel_branches() {
             .add_input(conv_id, "input_tensor")
             .add_output(conv_id, &output_name);
 
-        builder
-            .connect(input_id, conv_id, "input_tensor")
-            .unwrap();
+        builder.connect(input_id, conv_id, "input_tensor").unwrap();
 
         output_tensors.push(output_name);
     }
@@ -248,7 +235,10 @@ fn test_wide_graph_many_parallel_branches() {
     let optimizer = Optimizer::new(OptimizationLevel::O3);
 
     let result = optimizer.optimize(&mut graph);
-    assert!(result.is_ok(), "Should handle wide graph with many branches");
+    assert!(
+        result.is_ok(),
+        "Should handle wide graph with many branches"
+    );
 }
 
 // Graphs with unusual patterns
@@ -269,15 +259,14 @@ fn test_graph_with_multiple_inputs() {
         .add_input(add_id, "input2_tensor")
         .add_output(add_id, "output_tensor");
 
-    builder
-        .connect(input1_id, add_id, "input1_tensor")
-        .unwrap();
-    builder
-        .connect(input2_id, add_id, "input2_tensor")
-        .unwrap();
+    builder.connect(input1_id, add_id, "input1_tensor").unwrap();
+    builder.connect(input2_id, add_id, "input2_tensor").unwrap();
 
     builder
-        .set_inputs(vec!["input1_tensor".to_string(), "input2_tensor".to_string()])
+        .set_inputs(vec![
+            "input1_tensor".to_string(),
+            "input2_tensor".to_string(),
+        ])
         .set_outputs(vec!["output_tensor".to_string()]);
 
     let mut graph = builder.build().unwrap();
@@ -309,9 +298,7 @@ fn test_graph_with_multiple_outputs() {
         .add_input(relu2_id, "conv_output")
         .add_output(relu2_id, "output2");
 
-    builder
-        .connect(input_id, conv_id, "input_tensor")
-        .unwrap();
+    builder.connect(input_id, conv_id, "input_tensor").unwrap();
     builder.connect(conv_id, relu1_id, "conv_output").unwrap();
     builder.connect(conv_id, relu2_id, "conv_output").unwrap();
 
@@ -368,9 +355,7 @@ fn test_graph_with_diverse_operation_types() {
         .add_input(add_id, "matmul_out")
         .add_output(add_id, "output_tensor");
 
-    builder
-        .connect(input_id, conv_id, "input_tensor")
-        .unwrap();
+    builder.connect(input_id, conv_id, "input_tensor").unwrap();
     builder.connect(conv_id, bn_id, "conv_out").unwrap();
     builder.connect(bn_id, relu_id, "bn_out").unwrap();
     builder.connect(relu_id, pool_id, "relu_out").unwrap();
@@ -458,9 +443,7 @@ fn test_graph_with_skip_connection() {
         .add_input(add_id, "conv2_out")
         .add_output(add_id, "output_tensor");
 
-    builder
-        .connect(input_id, conv1_id, "input_tensor")
-        .unwrap();
+    builder.connect(input_id, conv1_id, "input_tensor").unwrap();
     builder.connect(conv1_id, conv2_id, "conv1_out").unwrap();
     builder.connect(conv2_id, add_id, "conv2_out").unwrap();
     builder.connect(input_id, add_id, "input_tensor").unwrap();

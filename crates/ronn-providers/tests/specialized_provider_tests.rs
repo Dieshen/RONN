@@ -3,7 +3,9 @@
 //! These tests are conditionally compiled based on feature flags.
 
 use anyhow::Result;
-use ronn_core::{DataType, ExecutionProvider, GraphNode, ProviderId, SubGraph, Tensor, TensorLayout};
+use ronn_core::{
+    DataType, ExecutionProvider, GraphNode, ProviderId, SubGraph, Tensor, TensorLayout,
+};
 use std::collections::HashMap;
 
 // ============================================================================
@@ -15,7 +17,7 @@ mod gpu_tests {
     use super::*;
     use ronn_providers::{
         create_gpu_provider, create_gpu_provider_with_config, GpuExecutionProvider,
-        MultiGpuMemoryConfig, GpuTopologyManager, TopologyConfig,
+        GpuTopologyManager, MultiGpuMemoryConfig, TopologyConfig,
     };
 
     #[test]
@@ -135,7 +137,10 @@ mod gpu_tests {
                 let topology = manager.get_topology();
 
                 if topology.devices.len() > 1 {
-                    println!("Multi-GPU system detected: {} devices", topology.devices.len());
+                    println!(
+                        "Multi-GPU system detected: {} devices",
+                        topology.devices.len()
+                    );
                 } else {
                     println!("Single GPU or no GPU detected");
                 }
@@ -155,15 +160,18 @@ mod gpu_tests {
 mod bitnet_tests {
     use super::*;
     use ronn_providers::{
-        create_bitnet_provider, BitNetExecutionProvider, BitNetProviderConfig,
-        BitNetQuantizer, QuantizationMethod, BinaryTensor,
+        create_bitnet_provider, BinaryTensor, BitNetExecutionProvider, BitNetProviderConfig,
+        BitNetQuantizer, QuantizationMethod,
     };
 
     #[test]
     fn test_bitnet_provider_creation() -> Result<()> {
         let provider = create_bitnet_provider()?;
 
-        assert_eq!(provider.provider_id(), ProviderId::Custom("BitNet".to_string()));
+        assert_eq!(
+            provider.provider_id(),
+            ProviderId::Custom("BitNet".to_string())
+        );
 
         let capability = provider.get_capability();
         assert!(!capability.supported_ops.is_empty());
@@ -178,12 +186,7 @@ mod bitnet_tests {
 
         // Create test tensor
         let data = vec![1.0, -0.5, 0.3, -0.8, 0.0, 0.9];
-        let tensor = Tensor::from_data(
-            data,
-            vec![6],
-            DataType::F32,
-            TensorLayout::RowMajor,
-        )?;
+        let tensor = Tensor::from_data(data, vec![6], DataType::F32, TensorLayout::RowMajor)?;
 
         // Quantize to 1-bit
         match quantizer.quantize(&tensor) {
@@ -245,14 +248,17 @@ mod bitnet_tests {
 mod wasm_tests {
     use super::*;
     use ronn_providers::{
-        create_wasm_provider, WasmExecutionProvider, WasmProviderConfig, WasmBridge,
+        create_wasm_provider, WasmBridge, WasmExecutionProvider, WasmProviderConfig,
     };
 
     #[test]
     fn test_wasm_provider_creation() -> Result<()> {
         match create_wasm_provider() {
             Ok(provider) => {
-                assert_eq!(provider.provider_id(), ProviderId::Custom("WASM".to_string()));
+                assert_eq!(
+                    provider.provider_id(),
+                    ProviderId::Custom("WASM".to_string())
+                );
 
                 let capability = provider.get_capability();
                 assert!(!capability.supported_ops.is_empty());
@@ -315,8 +321,8 @@ mod wasm_tests {
 mod custom_hardware_tests {
     use super::*;
     use ronn_providers::{
-        CustomProviderRegistry, create_npu_provider, create_tpu_provider,
-        NpuProvider, TpuProvider, NpuConfig, TpuConfig,
+        create_npu_provider, create_tpu_provider, CustomProviderRegistry, NpuConfig, NpuProvider,
+        TpuConfig, TpuProvider,
     };
 
     #[test]
@@ -421,5 +427,8 @@ fn test_default_features() {
     use ronn_providers::create_cpu_provider;
 
     let result = create_cpu_provider();
-    assert!(result.is_ok(), "CPU provider should be available by default");
+    assert!(
+        result.is_ok(),
+        "CPU provider should be available by default"
+    );
 }

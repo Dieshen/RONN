@@ -13,7 +13,10 @@ fn test_cpu_optimization_pass_runs() {
     let pass = CpuOptimizationPass;
 
     let result = pass.run(&mut graph);
-    assert!(result.is_ok(), "CPU optimization pass should complete successfully");
+    assert!(
+        result.is_ok(),
+        "CPU optimization pass should complete successfully"
+    );
 }
 
 #[test]
@@ -25,7 +28,10 @@ fn test_cpu_optimization_on_empty_graph() {
     assert!(result.is_ok(), "Should handle empty graph gracefully");
 
     let stats = result.unwrap();
-    assert_eq!(stats.nodes_modified, 0, "Empty graph should have no modifications");
+    assert_eq!(
+        stats.nodes_modified, 0,
+        "Empty graph should have no modifications"
+    );
 }
 
 #[test]
@@ -33,11 +39,17 @@ fn test_cpu_optimization_preserves_graph_validity() {
     let mut graph = create_simple_conv_graph();
     let pass = CpuOptimizationPass;
 
-    assert!(verify_graph_valid(&graph), "Graph should be valid before optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid before optimization"
+    );
 
     pass.run(&mut graph).unwrap();
 
-    assert!(verify_graph_valid(&graph), "Graph should remain valid after CPU optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should remain valid after CPU optimization"
+    );
 }
 
 #[test]
@@ -54,8 +66,14 @@ fn test_cpu_optimization_stats_structure() {
     let stats = pass.run(&mut graph).unwrap();
 
     // Verify stats structure
-    assert_eq!(stats.nodes_removed, 0, "CPU optimization should not remove nodes");
-    assert_eq!(stats.nodes_fused, 0, "CPU optimization should not fuse nodes");
+    assert_eq!(
+        stats.nodes_removed, 0,
+        "CPU optimization should not remove nodes"
+    );
+    assert_eq!(
+        stats.nodes_fused, 0,
+        "CPU optimization should not fuse nodes"
+    );
     // nodes_modified may be > 0 if SIMD or cache optimizations are applied
 }
 
@@ -116,7 +134,10 @@ fn test_gpu_optimization_pass_runs() {
     let pass = GpuOptimizationPass;
 
     let result = pass.run(&mut graph);
-    assert!(result.is_ok(), "GPU optimization pass should complete successfully");
+    assert!(
+        result.is_ok(),
+        "GPU optimization pass should complete successfully"
+    );
 }
 
 #[test]
@@ -129,7 +150,10 @@ fn test_gpu_optimization_on_empty_graph() {
 
     let stats = result.unwrap();
     assert_eq!(stats.nodes_fused, 0, "Empty graph should have no fusions");
-    assert_eq!(stats.nodes_modified, 0, "Empty graph should have no modifications");
+    assert_eq!(
+        stats.nodes_modified, 0,
+        "Empty graph should have no modifications"
+    );
 }
 
 #[test]
@@ -137,11 +161,17 @@ fn test_gpu_optimization_preserves_graph_validity() {
     let mut graph = create_simple_conv_graph();
     let pass = GpuOptimizationPass;
 
-    assert!(verify_graph_valid(&graph), "Graph should be valid before optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid before optimization"
+    );
 
     pass.run(&mut graph).unwrap();
 
-    assert!(verify_graph_valid(&graph), "Graph should remain valid after GPU optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should remain valid after GPU optimization"
+    );
 }
 
 #[test]
@@ -158,7 +188,10 @@ fn test_gpu_optimization_stats_structure() {
     let stats = pass.run(&mut graph).unwrap();
 
     // Verify stats structure
-    assert_eq!(stats.nodes_removed, 0, "GPU optimization should not remove nodes");
+    assert_eq!(
+        stats.nodes_removed, 0,
+        "GPU optimization should not remove nodes"
+    );
     // nodes_fused may be > 0 for kernel fusion
     // nodes_modified may be > 0 for memory coalescing optimizations
 }
@@ -230,12 +263,8 @@ fn test_gpu_optimization_kernel_fusion() {
         .add_input(sigmoid_id, "relu2_output")
         .add_output(sigmoid_id, "output_tensor");
 
-    builder
-        .connect(input_id, relu1_id, "input_tensor")
-        .unwrap();
-    builder
-        .connect(relu1_id, relu2_id, "relu1_output")
-        .unwrap();
+    builder.connect(input_id, relu1_id, "input_tensor").unwrap();
+    builder.connect(relu1_id, relu2_id, "relu1_output").unwrap();
     builder
         .connect(relu2_id, sigmoid_id, "relu2_output")
         .unwrap();
@@ -272,8 +301,14 @@ fn test_cpu_and_gpu_optimizations_are_independent() {
     let _gpu_result = gpu_pass.run(&mut graph_gpu).unwrap();
 
     // Both should succeed independently
-    assert!(verify_graph_valid(&graph_cpu), "CPU-optimized graph should be valid");
-    assert!(verify_graph_valid(&graph_gpu), "GPU-optimized graph should be valid");
+    assert!(
+        verify_graph_valid(&graph_cpu),
+        "CPU-optimized graph should be valid"
+    );
+    assert!(
+        verify_graph_valid(&graph_gpu),
+        "GPU-optimized graph should be valid"
+    );
 }
 
 #[test]
@@ -285,11 +320,17 @@ fn test_provider_optimizations_on_same_graph() {
 
     // Apply CPU optimization first
     let _cpu_result = cpu_pass.run(&mut graph).unwrap();
-    assert!(verify_graph_valid(&graph), "Graph should be valid after CPU optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid after CPU optimization"
+    );
 
     // Then apply GPU optimization
     let _gpu_result = gpu_pass.run(&mut graph).unwrap();
-    assert!(verify_graph_valid(&graph), "Graph should be valid after both optimizations");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid after both optimizations"
+    );
 
     // Both passes should work on the same graph sequentially
     // If we reached here, both passes succeeded

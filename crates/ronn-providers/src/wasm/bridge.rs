@@ -3,9 +3,9 @@
 //! This module provides seamless integration between Rust/WASM and JavaScript,
 //! including TypedArray conversion, IndexedDB caching, and Web Worker support.
 
-use std::collections::HashMap;
 use anyhow::{anyhow, Result};
-use ronn_core::{Tensor, DataType, TensorLayout};
+use ronn_core::{DataType, Tensor, TensorLayout};
+use std::collections::HashMap;
 
 /// Bridge for JavaScript interoperability.
 #[derive(Debug)]
@@ -90,10 +90,17 @@ impl TypedArrayInterface {
                 Ok(TypedArrayData::Uint32(u32_data))
             }
             DataType::Bool => {
-                let u8_data: Vec<u8> = tensor.data().iter().map(|&x| if x > 0.5 { 1 } else { 0 }).collect();
+                let u8_data: Vec<u8> = tensor
+                    .data()
+                    .iter()
+                    .map(|&x| if x > 0.5 { 1 } else { 0 })
+                    .collect();
                 Ok(TypedArrayData::Uint8(u8_data))
             }
-            _ => Err(anyhow!("Unsupported data type for TypedArray conversion: {:?}", tensor.dtype())),
+            _ => Err(anyhow!(
+                "Unsupported data type for TypedArray conversion: {:?}",
+                tensor.dtype()
+            )),
         }
     }
 
@@ -224,7 +231,8 @@ impl IndexedDbCache {
         if let Some(entry) = self.memory_cache.get_mut(key) {
             // Check if entry has expired
             let current_time = current_timestamp_ms();
-            if current_time - entry.timestamp > 24 * 60 * 60 * 1000 { // 24 hours
+            if current_time - entry.timestamp > 24 * 60 * 60 * 1000 {
+                // 24 hours
                 return None;
             }
 
@@ -254,7 +262,8 @@ impl IndexedDbCache {
 
     /// Evict the least recently used entry.
     fn evict_lru_entry(&mut self) {
-        let lru_key = self.memory_cache
+        let lru_key = self
+            .memory_cache
             .iter()
             .min_by_key(|(_, entry)| entry.access_count)
             .map(|(key, _)| key.clone());
@@ -340,7 +349,8 @@ impl WasmBridge {
             _ => return Err(anyhow!("Unknown data type: {}", export.dtype)),
         };
 
-        self.typed_array_interface.typed_array_to_tensor(export.data, export.shape, dtype)
+        self.typed_array_interface
+            .typed_array_to_tensor(export.data, export.shape, dtype)
     }
 
     /// Cache model data for future use.
@@ -423,7 +433,10 @@ impl WorkerPool {
 
     /// Get the number of available workers.
     pub fn available_count(&self) -> usize {
-        self.available_workers.iter().filter(|&&available| available).count()
+        self.available_workers
+            .iter()
+            .filter(|&&available| available)
+            .count()
     }
 
     /// Reserve a worker for processing.
@@ -465,7 +478,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0],
             vec![2, 2],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         // Export to JavaScript format
@@ -494,7 +507,7 @@ mod tests {
             vec![1.0, -2.0, 3.5],
             vec![3],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         let typed_array = interface.tensor_to_typed_array(&tensor)?;

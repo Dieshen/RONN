@@ -23,12 +23,8 @@ pub fn create_simple_conv_graph() -> ModelGraph {
         .add_input(relu_id, "conv_output")
         .add_output(relu_id, "output_tensor");
 
-    builder
-        .connect(input_id, conv_id, "input_tensor")
-        .unwrap();
-    builder
-        .connect(conv_id, relu_id, "conv_output")
-        .unwrap();
+    builder.connect(input_id, conv_id, "input_tensor").unwrap();
+    builder.connect(conv_id, relu_id, "conv_output").unwrap();
 
     builder
         .set_inputs(vec!["input_tensor".to_string()])
@@ -59,9 +55,7 @@ pub fn create_fusible_graph() -> ModelGraph {
         .add_input(relu_id, "bn_output")
         .add_output(relu_id, "output_tensor");
 
-    builder
-        .connect(input_id, conv_id, "input_tensor")
-        .unwrap();
+    builder.connect(input_id, conv_id, "input_tensor").unwrap();
     builder.connect(conv_id, bn_id, "conv_output").unwrap();
     builder.connect(bn_id, relu_id, "bn_output").unwrap();
 
@@ -92,9 +86,7 @@ pub fn create_matmul_bias_graph() -> ModelGraph {
     builder
         .connect(input_id, matmul_id, "input_tensor")
         .unwrap();
-    builder
-        .connect(matmul_id, add_id, "matmul_output")
-        .unwrap();
+    builder.connect(matmul_id, add_id, "matmul_output").unwrap();
 
     builder
         .set_inputs(vec!["input_tensor".to_string()])
@@ -126,9 +118,7 @@ pub fn create_graph_with_dead_code() -> ModelGraph {
         .add_input(output_id, "conv1_output")
         .add_output(output_id, "output_tensor");
 
-    builder
-        .connect(input_id, conv1_id, "input_tensor")
-        .unwrap();
+    builder.connect(input_id, conv1_id, "input_tensor").unwrap();
     builder
         .connect(conv1_id, output_id, "conv1_output")
         .unwrap();
@@ -155,12 +145,20 @@ pub fn create_constant_graph() -> ModelGraph {
     let const1_id = builder.add_op("Constant", Some("const1".to_string()));
     builder
         .add_output(const1_id, "const1_output")
-        .add_attribute(const1_id, "value", AttributeValue::FloatArray(vec![1.0, 2.0, 3.0]));
+        .add_attribute(
+            const1_id,
+            "value",
+            AttributeValue::FloatArray(vec![1.0, 2.0, 3.0]),
+        );
 
     let const2_id = builder.add_op("Constant", Some("const2".to_string()));
     builder
         .add_output(const2_id, "const2_output")
-        .add_attribute(const2_id, "value", AttributeValue::FloatArray(vec![4.0, 5.0, 6.0]));
+        .add_attribute(
+            const2_id,
+            "value",
+            AttributeValue::FloatArray(vec![4.0, 5.0, 6.0]),
+        );
 
     // Add operation on constants (can be folded)
     let add_id = builder.add_op("Add", Some("add_constants".to_string()));
@@ -169,12 +167,8 @@ pub fn create_constant_graph() -> ModelGraph {
         .add_input(add_id, "const2_output")
         .add_output(add_id, "output_tensor");
 
-    builder
-        .connect(const1_id, add_id, "const1_output")
-        .unwrap();
-    builder
-        .connect(const2_id, add_id, "const2_output")
-        .unwrap();
+    builder.connect(const1_id, add_id, "const1_output").unwrap();
+    builder.connect(const2_id, add_id, "const2_output").unwrap();
 
     builder
         .set_inputs(vec![])
@@ -217,7 +211,11 @@ pub fn create_conv_heavy_graph() -> ModelGraph {
 
 /// Count nodes of a specific operation type in the graph
 pub fn count_nodes_by_type(graph: &ModelGraph, op_type: &str) -> usize {
-    graph.nodes().iter().filter(|n| n.op_type == op_type).count()
+    graph
+        .nodes()
+        .iter()
+        .filter(|n| n.op_type == op_type)
+        .count()
 }
 
 /// Verify graph structure is valid

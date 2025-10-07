@@ -2,8 +2,8 @@ use super::{OnnxOperator, Result};
 use crate::error::OnnxError;
 // Note: ArithmeticOps and ReductionOps may be needed for future activation functions
 // use ronn_core::ops::{ArithmeticOps, ReductionOps};
-use ronn_core::NodeAttribute;
 use ronn_core::tensor::Tensor;
+use ronn_core::NodeAttribute;
 use std::collections::HashMap;
 
 // ReLU: max(0, x)

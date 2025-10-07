@@ -10,7 +10,9 @@
 mod test_utils;
 
 use anyhow::Result;
-use ronn_core::{DataType, SessionConfig, SessionManager, Tensor, TensorLayout, OptimizationLevel, ProviderId};
+use ronn_core::{
+    DataType, OptimizationLevel, ProviderId, SessionConfig, SessionManager, Tensor, TensorLayout,
+};
 use std::sync::Arc;
 use std::time::Duration;
 use test_utils::*;
@@ -44,11 +46,16 @@ async fn test_session_with_config() -> Result<()> {
         custom_options: std::collections::HashMap::new(),
     };
 
-    let session_id = manager.create_session_with_config(graph, Some(config)).await?;
+    let session_id = manager
+        .create_session_with_config(graph, Some(config))
+        .await?;
     let session = manager.get_session(session_id).unwrap();
 
     assert_eq!(session.config.thread_count, Some(4));
-    assert_eq!(session.config.optimization_level, OptimizationLevel::Aggressive);
+    assert_eq!(
+        session.config.optimization_level,
+        OptimizationLevel::Aggressive
+    );
     Ok(())
 }
 
@@ -77,7 +84,9 @@ async fn test_session_statistics() -> Result<()> {
 
     // Run inference multiple times
     for _ in 0..5 {
-        manager.run_inference(session_id, vec![input.clone()]).await?;
+        manager
+            .run_inference(session_id, vec![input.clone()])
+            .await?;
     }
 
     let stats = manager.get_session_statistics(session_id).await?;
@@ -141,7 +150,9 @@ async fn test_concurrent_inference() -> Result<()> {
         let manager_clone = Arc::clone(&manager);
         let input_clone = input.clone();
         let handle = tokio::spawn(async move {
-            manager_clone.run_inference(session_id, vec![input_clone]).await
+            manager_clone
+                .run_inference(session_id, vec![input_clone])
+                .await
         });
         handles.push(handle);
     }
@@ -149,7 +160,10 @@ async fn test_concurrent_inference() -> Result<()> {
     let results: Vec<_> = futures::future::join_all(handles).await;
 
     // Count successes
-    let success_count = results.iter().filter(|r| r.as_ref().unwrap().is_ok()).count();
+    let success_count = results
+        .iter()
+        .filter(|r| r.as_ref().unwrap().is_ok())
+        .count();
 
     // Some inferences should succeed
     assert!(success_count > 0);
@@ -167,7 +181,9 @@ async fn test_max_concurrent_inferences() -> Result<()> {
     let manager = Arc::new(SessionManager::with_config(None, None, config.clone()));
     let graph = create_test_graph()?;
 
-    let session_id = manager.create_session_with_config(graph, Some(config)).await?;
+    let session_id = manager
+        .create_session_with_config(graph, Some(config))
+        .await?;
     let input = Tensor::ones(vec![1, 3, 224, 224], DataType::F32, TensorLayout::RowMajor)?;
 
     let mut handles = vec![];
@@ -176,7 +192,9 @@ async fn test_max_concurrent_inferences() -> Result<()> {
         let manager_clone = Arc::clone(&manager);
         let input_clone = input.clone();
         let handle = tokio::spawn(async move {
-            manager_clone.run_inference(session_id, vec![input_clone]).await
+            manager_clone
+                .run_inference(session_id, vec![input_clone])
+                .await
         });
         handles.push(handle);
     }
@@ -184,8 +202,14 @@ async fn test_max_concurrent_inferences() -> Result<()> {
     let results: Vec<_> = futures::future::join_all(handles).await;
 
     // Some should succeed, some should fail due to concurrency limit
-    let success_count = results.iter().filter(|r| r.as_ref().unwrap().is_ok()).count();
-    let failure_count = results.iter().filter(|r| r.as_ref().unwrap().is_err()).count();
+    let success_count = results
+        .iter()
+        .filter(|r| r.as_ref().unwrap().is_ok())
+        .count();
+    let failure_count = results
+        .iter()
+        .filter(|r| r.as_ref().unwrap().is_err())
+        .count();
 
     assert!(success_count > 0);
     assert!(failure_count > 0);
@@ -250,7 +274,9 @@ async fn test_global_statistics() -> Result<()> {
         let input = Tensor::ones(vec![1, 3, 224, 224], DataType::F32, TensorLayout::RowMajor)?;
 
         for _ in 0..(i + 1) {
-            manager.run_inference(session_id, vec![input.clone()]).await?;
+            manager
+                .run_inference(session_id, vec![input.clone()])
+                .await?;
         }
     }
 
@@ -322,7 +348,9 @@ async fn test_session_error_tracking() -> Result<()> {
     let input = Tensor::ones(vec![1, 3, 224, 224], DataType::F32, TensorLayout::RowMajor)?;
 
     // Run successful inference
-    manager.run_inference(session_id, vec![input.clone()]).await?;
+    manager
+        .run_inference(session_id, vec![input.clone()])
+        .await?;
 
     let stats_before = manager.get_session_statistics(session_id).await?;
     assert_eq!(stats_before.error_count, 0);
@@ -347,9 +375,8 @@ async fn test_session_waits_for_active_inferences() -> Result<()> {
 
     // Start a long-running inference
     let manager_clone = Arc::clone(&manager);
-    let inference_handle = tokio::spawn(async move {
-        manager_clone.run_inference(session_id, vec![input]).await
-    });
+    let inference_handle =
+        tokio::spawn(async move { manager_clone.run_inference(session_id, vec![input]).await });
 
     // Give it a moment to start
     tokio::time::sleep(Duration::from_millis(10)).await;
@@ -434,7 +461,9 @@ async fn test_session_timing_statistics() -> Result<()> {
 
     // Run multiple inferences
     for _ in 0..10 {
-        manager.run_inference(session_id, vec![input.clone()]).await?;
+        manager
+            .run_inference(session_id, vec![input.clone()])
+            .await?;
     }
 
     let stats = manager.get_session_statistics(session_id).await?;
@@ -468,10 +497,16 @@ async fn test_session_resource_isolation() -> Result<()> {
     let input = Tensor::ones(vec![1, 3, 224, 224], DataType::F32, TensorLayout::RowMajor)?;
 
     // Run inferences on both sessions
-    manager.run_inference(session_id1, vec![input.clone()]).await?;
-    manager.run_inference(session_id1, vec![input.clone()]).await?;
+    manager
+        .run_inference(session_id1, vec![input.clone()])
+        .await?;
+    manager
+        .run_inference(session_id1, vec![input.clone()])
+        .await?;
 
-    manager.run_inference(session_id2, vec![input.clone()]).await?;
+    manager
+        .run_inference(session_id2, vec![input.clone()])
+        .await?;
 
     // Statistics should be isolated
     let stats1 = manager.get_session_statistics(session_id1).await?;

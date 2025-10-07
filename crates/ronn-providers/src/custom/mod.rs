@@ -13,22 +13,22 @@
 //! - **Performance profiling**: Built-in profiling and monitoring hooks
 
 #[cfg(feature = "custom-hardware")]
-pub mod registry;
-#[cfg(feature = "custom-hardware")]
-pub mod traits;
-#[cfg(feature = "custom-hardware")]
 pub mod example_npu;
 #[cfg(feature = "custom-hardware")]
 pub mod example_tpu;
+#[cfg(feature = "custom-hardware")]
+pub mod registry;
+#[cfg(feature = "custom-hardware")]
+pub mod traits;
 
 #[cfg(feature = "custom-hardware")]
-pub use registry::{CustomProviderRegistry, ProviderPlugin, PluginMetadata};
+pub use example_npu::{create_npu_provider, NpuConfig, NpuProvider};
 #[cfg(feature = "custom-hardware")]
-pub use traits::{CustomHardwareProvider, HardwareCapability, CustomKernel, DeviceMemory};
+pub use example_tpu::{create_tpu_provider, TpuConfig, TpuProvider};
 #[cfg(feature = "custom-hardware")]
-pub use example_npu::{NpuProvider, NpuConfig, create_npu_provider};
+pub use registry::{CustomProviderRegistry, PluginMetadata, ProviderPlugin};
 #[cfg(feature = "custom-hardware")]
-pub use example_tpu::{TpuProvider, TpuConfig, create_tpu_provider};
+pub use traits::{CustomHardwareProvider, CustomKernel, DeviceMemory, HardwareCapability};
 
 #[cfg(not(feature = "custom-hardware"))]
 /// Custom hardware provider framework is not available - enable the "custom-hardware" feature.

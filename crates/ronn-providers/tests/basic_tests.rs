@@ -2,10 +2,10 @@
 //!
 //! These are simplified tests to verify basic functionality compiles and runs.
 
-use ronn_core::{DataType, Tensor, TensorLayout, SubGraph, GraphNode};
+use ronn_core::{DataType, GraphNode, SubGraph, Tensor, TensorLayout};
 use ronn_providers::{
-    create_cpu_provider, create_provider_system,
-    ProviderRegistry, TopologyConfig, GpuTopologyManager,
+    create_cpu_provider, create_provider_system, GpuTopologyManager, ProviderRegistry,
+    TopologyConfig,
 };
 use std::collections::HashMap;
 
@@ -98,7 +98,11 @@ fn test_gpu_topology_manager_creation() {
     let topology = manager.get_topology();
 
     // Topology should exist even if empty
-    assert_eq!(topology.devices.len(), 0, "No devices when auto_discovery is off");
+    assert_eq!(
+        topology.devices.len(),
+        0,
+        "No devices when auto_discovery is off"
+    );
 }
 
 #[test]
@@ -130,7 +134,8 @@ fn test_tensor_operations() {
         outputs: vec!["output".to_string()],
     };
 
-    let (provider_id, kernel) = registry.compile_subgraph(subgraph)
+    let (provider_id, kernel) = registry
+        .compile_subgraph(subgraph)
         .expect("Failed to compile subgraph");
 
     assert_eq!(provider_id, ronn_core::ProviderId::CPU);

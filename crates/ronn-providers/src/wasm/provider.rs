@@ -9,9 +9,9 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use ronn_core::{
-    CompiledKernel, DataType, ExecutionProvider, MemoryType, OperatorSpec,
-    PerformanceProfile, ProviderCapability, ProviderConfig, ProviderId,
-    ResourceRequirements, SubGraph, TensorAllocator,
+    CompiledKernel, DataType, ExecutionProvider, MemoryType, OperatorSpec, PerformanceProfile,
+    ProviderCapability, ProviderConfig, ProviderId, ResourceRequirements, SubGraph,
+    TensorAllocator,
 };
 use tracing::{debug, info, warn};
 
@@ -81,8 +81,10 @@ impl WasmExecutionProvider {
 
     /// Create a WASM execution provider with custom configuration.
     pub fn with_config(config: WasmProviderConfig) -> Result<Self> {
-        info!("Creating WASM execution provider with {}MB memory limit",
-              config.memory_limit_bytes / (1024 * 1024));
+        info!(
+            "Creating WASM execution provider with {}MB memory limit",
+            config.memory_limit_bytes / (1024 * 1024)
+        );
 
         // Create memory allocator with the specified limit
         let allocator = create_wasm_allocator_with_limit(config.memory_limit_bytes);
@@ -193,7 +195,10 @@ impl WasmExecutionProvider {
     /// Create a kernel for the specified operation.
     fn create_kernel_for_operation(&self, op_type: &str) -> Result<WasmKernel> {
         if !self.supports_operation(op_type) {
-            return Err(anyhow!("Operation {} not supported by WASM provider", op_type));
+            return Err(anyhow!(
+                "Operation {} not supported by WASM provider",
+                op_type
+            ));
         }
 
         Ok(create_wasm_kernel(op_type))
@@ -223,7 +228,9 @@ impl WasmExecutionProvider {
     /// Get available memory for computation.
     pub fn get_available_memory(&self) -> usize {
         let memory_info = self.allocator.get_memory_info();
-        memory_info.total_bytes.saturating_sub(memory_info.allocated_bytes)
+        memory_info
+            .total_bytes
+            .saturating_sub(memory_info.allocated_bytes)
     }
 
     /// Get cache statistics from the bridge.
@@ -257,13 +264,13 @@ impl ExecutionProvider for WasmExecutionProvider {
         ProviderCapability {
             supported_ops: self.supported_ops.clone(),
             data_types: vec![
-                DataType::F32,   // Primary data type
-                DataType::F16,   // Half precision when supported
-                DataType::U8,    // Quantized data
-                DataType::I8,    // Signed quantized data
-                DataType::I32,   // Integer operations
-                DataType::U32,   // Unsigned integers
-                DataType::Bool,  // Boolean operations
+                DataType::F32,  // Primary data type
+                DataType::F16,  // Half precision when supported
+                DataType::U8,   // Quantized data
+                DataType::I8,   // Signed quantized data
+                DataType::I32,  // Integer operations
+                DataType::U32,  // Unsigned integers
+                DataType::Bool, // Boolean operations
             ],
             memory_types: vec![MemoryType::SystemRAM], // WASM linear memory
             performance_profile: PerformanceProfile::MemoryOptimized,
@@ -283,7 +290,10 @@ impl ExecutionProvider for WasmExecutionProvider {
     }
 
     fn compile_subgraph(&self, subgraph: SubGraph) -> Result<Box<dyn CompiledKernel>> {
-        debug!("Compiling WASM subgraph with {} nodes", subgraph.nodes.len());
+        debug!(
+            "Compiling WASM subgraph with {} nodes",
+            subgraph.nodes.len()
+        );
 
         // Check cache first
         let cache_key = self.generate_cache_key(&subgraph);
@@ -297,7 +307,9 @@ impl ExecutionProvider for WasmExecutionProvider {
 
         // For now, compile single-node subgraphs
         if subgraph.nodes.len() != 1 {
-            return Err(anyhow!("WASM provider currently supports only single-node subgraphs"));
+            return Err(anyhow!(
+                "WASM provider currently supports only single-node subgraphs"
+            ));
         }
 
         let node = &subgraph.nodes[0];
@@ -351,8 +363,8 @@ impl ExecutionProvider for WasmExecutionProvider {
                 for (key, value) in &config.custom_options {
                     match key.as_str() {
                         "enable_simd" => {
-                            self.config.enable_simd = value.parse().unwrap_or(true) &&
-                                WasmSimd128Ops::is_simd_available();
+                            self.config.enable_simd = value.parse().unwrap_or(true)
+                                && WasmSimd128Ops::is_simd_available();
                         }
                         "enable_web_workers" => {
                             self.config.enable_web_workers = value.parse().unwrap_or(true);
@@ -371,8 +383,10 @@ impl ExecutionProvider for WasmExecutionProvider {
             }
         }
 
-        info!("WASM provider reconfigured with optimization level: {:?}",
-              config.optimization_level);
+        info!(
+            "WASM provider reconfigured with optimization level: {:?}",
+            config.optimization_level
+        );
         Ok(())
     }
 
@@ -437,7 +451,10 @@ mod tests {
         assert!(capability.supported_ops.contains("MatMul"));
         assert!(capability.data_types.contains(&DataType::F32));
         assert!(capability.data_types.contains(&DataType::U8));
-        assert_eq!(capability.performance_profile, PerformanceProfile::MemoryOptimized);
+        assert_eq!(
+            capability.performance_profile,
+            PerformanceProfile::MemoryOptimized
+        );
 
         Ok(())
     }

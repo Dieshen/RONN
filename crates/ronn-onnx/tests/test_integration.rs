@@ -419,12 +419,7 @@ fn test_execute_simple_operator() {
 
     // Create test input
     let data = vec![-1.0, 0.0, 1.0, 2.0];
-    let input = Tensor::from_data(
-        data,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input = Tensor::from_data(data, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input];
     let attributes = std::collections::HashMap::new();

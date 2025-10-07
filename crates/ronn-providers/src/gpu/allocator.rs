@@ -3,11 +3,11 @@
 //! This module provides GPU memory allocation and management through
 //! the Candle library's device abstraction.
 
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, Result};
-use candle_core::{Device, Tensor as CandleTensor, DType, Shape};
+use candle_core::{DType, Device, Shape, Tensor as CandleTensor};
 use ronn_core::{DataType, MemoryInfo, MemoryType, TensorAllocator, TensorBuffer};
 use tracing::{debug, warn};
 
@@ -124,7 +124,9 @@ impl GpuMemoryAllocator {
             DataType::U8 => candle_core::DType::U8,
             DataType::U32 => candle_core::DType::U32,
             // Fallback for unsupported types
-            DataType::I8 | DataType::I32 | DataType::I64 | DataType::Bool => candle_core::DType::F32,
+            DataType::I8 | DataType::I32 | DataType::I64 | DataType::Bool => {
+                candle_core::DType::F32
+            }
         }
     }
 
@@ -192,7 +194,11 @@ impl GpuMemoryAllocator {
     }
 
     /// Allocate GPU memory using Candle tensor.
-    fn allocate_gpu_memory(&self, size: usize, dtype: DataType) -> Result<(CandleTensor, TensorBuffer)> {
+    fn allocate_gpu_memory(
+        &self,
+        size: usize,
+        dtype: DataType,
+    ) -> Result<(CandleTensor, TensorBuffer)> {
         let elements = size / self.element_size(dtype);
         let candle_dtype = self.dtype_to_candle(dtype);
 
@@ -319,10 +325,7 @@ impl TensorAllocator for GpuMemoryAllocator {
         if let Some(tensor) = tensor {
             // Try to return tensor to pool
             if self.return_tensor_to_pool(tensor, &buffer) {
-                debug!(
-                    "Returned {} bytes to GPU memory pool",
-                    buffer_size
-                );
+                debug!("Returned {} bytes to GPU memory pool", buffer_size);
             } else {
                 // Pool is full, tensor will be dropped and GPU memory freed by Candle
                 debug!(

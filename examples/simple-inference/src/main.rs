@@ -64,9 +64,18 @@ fn optimization_levels_example() -> Result<(), Box<dyn std::error::Error>> {
 
     let optimization_levels = vec![
         (OptimizationLevel::O0, "O0 - No optimizations"),
-        (OptimizationLevel::O1, "O1 - Basic optimizations (constant folding, DCE)"),
-        (OptimizationLevel::O2, "O2 - Standard optimizations (+ node fusion, layout)"),
-        (OptimizationLevel::O3, "O3 - Aggressive optimizations (+ provider-specific)"),
+        (
+            OptimizationLevel::O1,
+            "O1 - Basic optimizations (constant folding, DCE)",
+        ),
+        (
+            OptimizationLevel::O2,
+            "O2 - Standard optimizations (+ node fusion, layout)",
+        ),
+        (
+            OptimizationLevel::O3,
+            "O3 - Aggressive optimizations (+ provider-specific)",
+        ),
     ];
 
     for (level, description) in optimization_levels {

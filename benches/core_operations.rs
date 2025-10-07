@@ -55,21 +55,11 @@ fn bench_tensor_operations(c: &mut Criterion) {
     let data1: Vec<f32> = (0..1000).map(|x| x as f32).collect();
     let data2: Vec<f32> = (0..1000).map(|x| (x as f32) * 2.0).collect();
 
-    let tensor1 = Tensor::from_data(
-        data1,
-        shape.clone(),
-        DataType::F32,
-        TensorLayout::RowMajor,
-    )
-    .unwrap();
+    let tensor1 =
+        Tensor::from_data(data1, shape.clone(), DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let tensor2 = Tensor::from_data(
-        data2,
-        shape.clone(),
-        DataType::F32,
-        TensorLayout::RowMajor,
-    )
-    .unwrap();
+    let _tensor2 =
+        Tensor::from_data(data2, shape.clone(), DataType::F32, TensorLayout::RowMajor).unwrap();
 
     group.throughput(Throughput::Elements(1000));
 
@@ -105,21 +95,20 @@ fn bench_hrm_complexity_assessment(c: &mut Criterion) {
         let numel: usize = shape.iter().product();
         let data: Vec<f32> = (0..numel).map(|x| (x as f32).sin()).collect();
 
-        let tensor = Tensor::from_data(
-            data,
-            shape.clone(),
-            DataType::F32,
-            TensorLayout::RowMajor,
-        )
-        .unwrap();
+        let tensor =
+            Tensor::from_data(data, shape.clone(), DataType::F32, TensorLayout::RowMajor).unwrap();
 
         group.throughput(Throughput::Elements(numel as u64));
 
-        group.bench_with_input(BenchmarkId::new("assess_and_route", name), &tensor, |b, tensor| {
-            b.iter(|| {
-                let _ = black_box(&mut hrm).process(black_box(tensor)).unwrap();
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("assess_and_route", name),
+            &tensor,
+            |b, tensor| {
+                b.iter(|| {
+                    let _ = black_box(&mut hrm).process(black_box(tensor)).unwrap();
+                });
+            },
+        );
     }
 
     group.finish();
@@ -137,15 +126,11 @@ fn bench_hrm_routing_strategies(c: &mut Criterion) {
     ];
 
     let shape = vec![1, 64];
-    let data: Vec<f32> = (0..64).map(|x| (x as f32).sin() * (x as f32).cos()).collect();
+    let data: Vec<f32> = (0..64)
+        .map(|x| (x as f32).sin() * (x as f32).cos())
+        .collect();
 
-    let tensor = Tensor::from_data(
-        data,
-        shape,
-        DataType::F32,
-        TensorLayout::RowMajor,
-    )
-    .unwrap();
+    let tensor = Tensor::from_data(data, shape, DataType::F32, TensorLayout::RowMajor).unwrap();
 
     group.throughput(Throughput::Elements(64));
 
@@ -181,13 +166,7 @@ fn bench_hrm_e2e_processing(c: &mut Criterion) {
         let numel: usize = shape.iter().product();
         let data: Vec<f32> = (0..numel).map(|x| (x as f32 * 0.01).sin()).collect();
 
-        let tensor = Tensor::from_data(
-            data,
-            shape,
-            DataType::F32,
-            TensorLayout::RowMajor,
-        )
-        .unwrap();
+        let tensor = Tensor::from_data(data, shape, DataType::F32, TensorLayout::RowMajor).unwrap();
 
         group.throughput(Throughput::Elements(numel as u64));
 

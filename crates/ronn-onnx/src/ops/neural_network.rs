@@ -1,7 +1,7 @@
 use super::{OnnxOperator, Result};
 use crate::error::OnnxError;
-use ronn_core::NodeAttribute;
 use ronn_core::tensor::Tensor;
+use ronn_core::NodeAttribute;
 use std::collections::HashMap;
 
 // Conv2d: 2D convolution
@@ -44,13 +44,24 @@ impl OnnxOperator for Conv2dOp {
         let dilations_usize: Vec<usize> = dilations.iter().map(|&x| x as usize).collect();
 
         // Perform convolution
-        let result = input.conv2d(weight, bias, &strides_usize, &pads_usize, &dilations_usize, group as usize)?;
+        let result = input.conv2d(
+            weight,
+            bias,
+            &strides_usize,
+            &pads_usize,
+            &dilations_usize,
+            group as usize,
+        )?;
         Ok(vec![result])
     }
 }
 
 impl Conv2dOp {
-    fn get_ints_attr(attrs: &HashMap<String, NodeAttribute>, name: &str, default: Vec<i64>) -> Vec<i64> {
+    fn get_ints_attr(
+        attrs: &HashMap<String, NodeAttribute>,
+        name: &str,
+        default: Vec<i64>,
+    ) -> Vec<i64> {
         if let Some(NodeAttribute::IntArray(v)) = attrs.get(name) {
             v.clone()
         } else {
@@ -103,7 +114,11 @@ impl OnnxOperator for MaxPoolOp {
 }
 
 impl MaxPoolOp {
-    fn get_ints_attr(attrs: &HashMap<String, NodeAttribute>, name: &str, default: Vec<i64>) -> Vec<i64> {
+    fn get_ints_attr(
+        attrs: &HashMap<String, NodeAttribute>,
+        name: &str,
+        default: Vec<i64>,
+    ) -> Vec<i64> {
         if let Some(NodeAttribute::IntArray(v)) = attrs.get(name) {
             v.clone()
         } else {
@@ -148,7 +163,11 @@ impl OnnxOperator for AvgPoolOp {
 }
 
 impl AvgPoolOp {
-    fn get_ints_attr(attrs: &HashMap<String, NodeAttribute>, name: &str, default: Vec<i64>) -> Vec<i64> {
+    fn get_ints_attr(
+        attrs: &HashMap<String, NodeAttribute>,
+        name: &str,
+        default: Vec<i64>,
+    ) -> Vec<i64> {
         if let Some(NodeAttribute::IntArray(v)) = attrs.get(name) {
             v.clone()
         } else {

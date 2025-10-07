@@ -1,10 +1,10 @@
 //! Unit tests for ONNX model loader
 //! Tests: Model parsing, graph conversion, attribute extraction, initializer loading
 
-use ronn_core::NodeAttribute;
-use ronn_onnx::ModelLoader;
-use ronn_onnx::onnx_proto::*;
 use prost::Message;
+use ronn_core::NodeAttribute;
+use ronn_onnx::onnx_proto::*;
+use ronn_onnx::ModelLoader;
 
 // Helper functions to create common protobuf structures with less boilerplate
 fn dim_value(val: i64) -> tensor_shape_proto::Dimension {
@@ -17,7 +17,9 @@ fn dim_value(val: i64) -> tensor_shape_proto::Dimension {
 fn dim_param(name: &str) -> tensor_shape_proto::Dimension {
     tensor_shape_proto::Dimension {
         denotation: String::new(),
-        value: Some(tensor_shape_proto::dimension::Value::DimParam(name.to_string())),
+        value: Some(tensor_shape_proto::dimension::Value::DimParam(
+            name.to_string(),
+        )),
     }
 }
 
@@ -76,16 +78,14 @@ fn test_load_model_with_nodes() {
         ir_version: 7,
         graph: Some(GraphProto {
             name: "test_graph".to_string(),
-            node: vec![
-                NodeProto {
-                    name: "relu_node".to_string(),
-                    op_type: "Relu".to_string(),
-                    input: vec!["input1".to_string()],
-                    output: vec!["output1".to_string()],
-                    attribute: vec![],
-                    ..Default::default()
-                }
-            ],
+            node: vec![NodeProto {
+                name: "relu_node".to_string(),
+                op_type: "Relu".to_string(),
+                input: vec!["input1".to_string()],
+                output: vec!["output1".to_string()],
+                attribute: vec![],
+                ..Default::default()
+            }],
             input: vec![value_info("input1", 1, vec![1, 3, 224, 224])],
             output: vec![value_info("output1", 1, vec![1, 3, 224, 224])],
             initializer: vec![],
@@ -120,15 +120,13 @@ fn test_load_model_with_initializers() {
                 value_info("weight", 1, vec![2]),
             ],
             output: vec![],
-            initializer: vec![
-                TensorProto {
-                    name: "weight".to_string(),
-                    dims: vec![2],
-                    data_type: 1,
-                    float_data: vec![1.0, 2.0],
-                    ..Default::default()
-                }
-            ],
+            initializer: vec![TensorProto {
+                name: "weight".to_string(),
+                dims: vec![2],
+                data_type: 1,
+                float_data: vec![1.0, 2.0],
+                ..Default::default()
+            }],
             ..Default::default()
         }),
         ..Default::default()
@@ -422,7 +420,7 @@ fn test_parse_multiple_attributes() {
                         ints: vec![0, 0, 0, 0],
                         r#type: attribute_proto::AttributeType::Ints as i32,
                         ..Default::default()
-                    }
+                    },
                 ],
                 ..Default::default()
             }],
@@ -525,16 +523,14 @@ fn test_node_name_generation() {
         ir_version: 7,
         graph: Some(GraphProto {
             name: "test".to_string(),
-            node: vec![
-                NodeProto {
-                    name: "".to_string(), // Node without name - should be auto-generated
-                    op_type: "Relu".to_string(),
-                    input: vec!["x".to_string()],
-                    output: vec!["y".to_string()],
-                    attribute: vec![],
-                    ..Default::default()
-                }
-            ],
+            node: vec![NodeProto {
+                name: "".to_string(), // Node without name - should be auto-generated
+                op_type: "Relu".to_string(),
+                input: vec!["x".to_string()],
+                output: vec!["y".to_string()],
+                attribute: vec![],
+                ..Default::default()
+            }],
             input: vec![],
             output: vec![],
             initializer: vec![],
@@ -577,7 +573,7 @@ fn test_multiple_nodes() {
                     output: vec!["output".to_string()],
                     attribute: vec![],
                     ..Default::default()
-                }
+                },
             ],
             input: vec![],
             output: vec![],

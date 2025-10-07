@@ -27,7 +27,10 @@ fn bench_model_loading(c: &mut Criterion) {
     let model_path = PathBuf::from("crates/ronn-api/tests/fixtures/simple_model.onnx");
 
     if !model_path.exists() {
-        eprintln!("Skipping model_loading benchmark: test model not found at {:?}", model_path);
+        eprintln!(
+            "Skipping model_loading benchmark: test model not found at {:?}",
+            model_path
+        );
         return;
     }
 

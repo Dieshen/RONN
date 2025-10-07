@@ -1,6 +1,6 @@
 //! Sleep Consolidation - Offline memory processing and pattern extraction
 
-use crate::episodic::{EpisodicMemory, Episode};
+use crate::episodic::{Episode, EpisodicMemory};
 use crate::semantic::Concept;
 use crate::{MemoryId, Result};
 use std::collections::HashSet;
@@ -90,7 +90,10 @@ impl SleepConsolidation {
     }
 
     /// Run a full consolidation cycle
-    pub async fn consolidate_cycle(&mut self, episodic: &EpisodicMemory) -> Result<ConsolidationStats> {
+    pub async fn consolidate_cycle(
+        &mut self,
+        episodic: &EpisodicMemory,
+    ) -> Result<ConsolidationStats> {
         let patterns = self.extract_patterns(episodic).await?;
         let episodes_processed = episodic.len();
 
@@ -132,7 +135,8 @@ mod tests {
         // Add some episodes
         for i in 0..5 {
             let data = vec![i as f32; 3];
-            let tensor = Tensor::from_data(data, vec![1, 3], DataType::F32, TensorLayout::RowMajor)?;
+            let tensor =
+                Tensor::from_data(data, vec![1, 3], DataType::F32, TensorLayout::RowMajor)?;
 
             let episode = Episode {
                 id: i as MemoryId,
@@ -161,7 +165,8 @@ mod tests {
         // Add episodes
         for i in 0..3 {
             let data = vec![i as f32; 2];
-            let tensor = Tensor::from_data(data, vec![1, 2], DataType::F32, TensorLayout::RowMajor)?;
+            let tensor =
+                Tensor::from_data(data, vec![1, 2], DataType::F32, TensorLayout::RowMajor)?;
 
             let episode = Episode {
                 id: i as MemoryId,

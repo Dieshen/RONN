@@ -7,10 +7,13 @@
 //! - Threading configurations
 
 use anyhow::Result;
-use ronn_core::{DataType, ExecutionProvider, GraphNode, ProviderId, SubGraph, Tensor, TensorLayout, TensorAllocator};
+use ronn_core::{
+    DataType, ExecutionProvider, GraphNode, ProviderId, SubGraph, Tensor, TensorAllocator,
+    TensorLayout,
+};
 use ronn_providers::{
-    create_cpu_provider,  cpu::CpuExecutionProvider, cpu::CpuProviderConfig,
-    SystemMemoryAllocator, PooledMemoryAllocator, AlignedMemoryAllocator, PoolConfig,
+    cpu::CpuExecutionProvider, cpu::CpuProviderConfig, create_cpu_provider, AlignedMemoryAllocator,
+    PoolConfig, PooledMemoryAllocator, SystemMemoryAllocator,
 };
 use std::collections::HashMap;
 use std::time::Instant;
@@ -25,7 +28,10 @@ fn test_compare_allocator_performance() -> Result<()> {
     const ALLOC_SIZE: usize = 100;
 
     println!("\n=== Allocator Performance Comparison ===");
-    println!("Iterations: {}, Size: {} F32 elements\n", ITERATIONS, ALLOC_SIZE);
+    println!(
+        "Iterations: {}, Size: {} F32 elements\n",
+        ITERATIONS, ALLOC_SIZE
+    );
 
     // Test System Allocator
     let system_allocator = SystemMemoryAllocator::new();
@@ -55,10 +61,25 @@ fn test_compare_allocator_performance() -> Result<()> {
     }
     let pooled_time = start.elapsed();
 
-    println!("System Allocator:  {:?} ({:.2} µs/op)", system_time, system_time.as_micros() as f64 / ITERATIONS as f64);
-    println!("Aligned Allocator: {:?} ({:.2} µs/op)", aligned_time, aligned_time.as_micros() as f64 / ITERATIONS as f64);
-    println!("Pooled Allocator:  {:?} ({:.2} µs/op)", pooled_time, pooled_time.as_micros() as f64 / ITERATIONS as f64);
-    println!("Pool hit rate: {:.2}%\n", pooled_allocator.get_hit_rate() * 100.0);
+    println!(
+        "System Allocator:  {:?} ({:.2} µs/op)",
+        system_time,
+        system_time.as_micros() as f64 / ITERATIONS as f64
+    );
+    println!(
+        "Aligned Allocator: {:?} ({:.2} µs/op)",
+        aligned_time,
+        aligned_time.as_micros() as f64 / ITERATIONS as f64
+    );
+    println!(
+        "Pooled Allocator:  {:?} ({:.2} µs/op)",
+        pooled_time,
+        pooled_time.as_micros() as f64 / ITERATIONS as f64
+    );
+    println!(
+        "Pool hit rate: {:.2}%\n",
+        pooled_allocator.get_hit_rate() * 100.0
+    );
 
     // Pooled allocator should generally be faster due to reuse
     let speedup = system_time.as_micros() as f64 / pooled_time.as_micros() as f64;
@@ -84,8 +105,10 @@ fn test_allocation_size_impact() -> Result<()> {
         }
         let elapsed = start.elapsed();
 
-        println!("Size {:>6} F32: {:?} ({:.2} µs/op, hit rate: {:.1}%)",
-            size, elapsed,
+        println!(
+            "Size {:>6} F32: {:?} ({:.2} µs/op, hit rate: {:.1}%)",
+            size,
+            elapsed,
             elapsed.as_micros() as f64 / 100.0,
             allocator.get_hit_rate() * 100.0
         );
@@ -127,8 +150,10 @@ fn test_concurrent_allocation_performance() -> Result<()> {
         let elapsed = start.elapsed();
         let total_ops = thread_count * 250;
 
-        println!("{} threads: {:?} ({:.2} µs/op)",
-            thread_count, elapsed,
+        println!(
+            "{} threads: {:?} ({:.2} µs/op)",
+            thread_count,
+            elapsed,
             elapsed.as_micros() as f64 / total_ops as f64
         );
     }
@@ -190,8 +215,10 @@ fn test_cpu_provider_thread_scaling() -> Result<()> {
 
         let elapsed = start.elapsed();
 
-        println!("{} threads: {:?} ({:.2} µs/op)",
-            thread_count, elapsed,
+        println!(
+            "{} threads: {:?} ({:.2} µs/op)",
+            thread_count,
+            elapsed,
             elapsed.as_micros() as f64 / iterations as f64
         );
     }
@@ -256,8 +283,16 @@ fn test_simd_optimization_impact() -> Result<()> {
     }
     let no_simd_time = start.elapsed();
 
-    println!("With SIMD:    {:?} ({:.2} µs/op)", simd_time, simd_time.as_micros() as f64 / 1000.0);
-    println!("Without SIMD: {:?} ({:.2} µs/op)", no_simd_time, no_simd_time.as_micros() as f64 / 1000.0);
+    println!(
+        "With SIMD:    {:?} ({:.2} µs/op)",
+        simd_time,
+        simd_time.as_micros() as f64 / 1000.0
+    );
+    println!(
+        "Without SIMD: {:?} ({:.2} µs/op)",
+        no_simd_time,
+        no_simd_time.as_micros() as f64 / 1000.0
+    );
 
     let speedup = no_simd_time.as_micros() as f64 / simd_time.as_micros() as f64;
     println!("SIMD speedup: {:.2}x\n", speedup);
@@ -276,7 +311,8 @@ fn test_provider_creation_overhead() -> Result<()> {
     }
     let cpu_creation_time = start.elapsed();
 
-    println!("CPU provider creation: {:?} ({:.2} µs/op)",
+    println!(
+        "CPU provider creation: {:?} ({:.2} µs/op)",
         cpu_creation_time,
         cpu_creation_time.as_micros() as f64 / 100.0
     );
@@ -343,21 +379,30 @@ fn test_pool_hit_rate_vs_performance() -> Result<()> {
     println!("\n=== Pool Hit Rate vs Performance ===\n");
 
     let configs = vec![
-        ("Small pool", PoolConfig {
-            max_buffers_per_bucket: 2,
-            max_pool_size: 1024 * 1024,
-            bucket_granularity: 64,
-        }),
-        ("Medium pool", PoolConfig {
-            max_buffers_per_bucket: 8,
-            max_pool_size: 10 * 1024 * 1024,
-            bucket_granularity: 64,
-        }),
-        ("Large pool", PoolConfig {
-            max_buffers_per_bucket: 32,
-            max_pool_size: 50 * 1024 * 1024,
-            bucket_granularity: 64,
-        }),
+        (
+            "Small pool",
+            PoolConfig {
+                max_buffers_per_bucket: 2,
+                max_pool_size: 1024 * 1024,
+                bucket_granularity: 64,
+            },
+        ),
+        (
+            "Medium pool",
+            PoolConfig {
+                max_buffers_per_bucket: 8,
+                max_pool_size: 10 * 1024 * 1024,
+                bucket_granularity: 64,
+            },
+        ),
+        (
+            "Large pool",
+            PoolConfig {
+                max_buffers_per_bucket: 32,
+                max_pool_size: 50 * 1024 * 1024,
+                bucket_granularity: 64,
+            },
+        ),
     ];
 
     for (name, config) in configs {
@@ -376,8 +421,11 @@ fn test_pool_hit_rate_vs_performance() -> Result<()> {
         let elapsed = start.elapsed();
         let hit_rate = allocator.get_hit_rate();
 
-        println!("{}: {:?} (hit rate: {:.1}%, {:.2} µs/op)",
-            name, elapsed, hit_rate * 100.0,
+        println!(
+            "{}: {:?} (hit rate: {:.1}%, {:.2} µs/op)",
+            name,
+            elapsed,
+            hit_rate * 100.0,
             elapsed.as_micros() as f64 / (125.0 * 8.0)
         );
     }
@@ -397,16 +445,14 @@ fn test_inference_simulation() -> Result<()> {
 
     // Simulate a simpler workload: Add operation
     let subgraph = SubGraph {
-        nodes: vec![
-            GraphNode {
-                id: 0,
-                op_type: "Add".to_string(),
-                attributes: HashMap::new(),
-                inputs: vec!["input".to_string(), "bias".to_string()],
-                outputs: vec!["output".to_string()],
-                name: Some("add".to_string()),
-            },
-        ],
+        nodes: vec![GraphNode {
+            id: 0,
+            op_type: "Add".to_string(),
+            attributes: HashMap::new(),
+            inputs: vec!["input".to_string(), "bias".to_string()],
+            outputs: vec!["output".to_string()],
+            name: Some("add".to_string()),
+        }],
         edges: vec![],
         inputs: vec!["input".to_string(), "bias".to_string()],
         outputs: vec!["output".to_string()],
@@ -434,12 +480,21 @@ fn test_inference_simulation() -> Result<()> {
     let elapsed = start.elapsed();
 
     println!("Inference batch ({}): {:?}", batch_size, elapsed);
-    println!("Average latency: {:.2} ms", elapsed.as_micros() as f64 / (batch_size as f64 * 1000.0));
-    println!("Throughput: {:.0} inferences/sec", batch_size as f64 / elapsed.as_secs_f64());
+    println!(
+        "Average latency: {:.2} ms",
+        elapsed.as_micros() as f64 / (batch_size as f64 * 1000.0)
+    );
+    println!(
+        "Throughput: {:.0} inferences/sec",
+        batch_size as f64 / elapsed.as_secs_f64()
+    );
 
     // Get kernel statistics
     let stats = kernel.get_performance_stats();
-    println!("Kernel stats: {} executions, avg time: {:.2} µs\n", stats.execution_count, stats.average_time_us);
+    println!(
+        "Kernel stats: {} executions, avg time: {:.2} µs\n",
+        stats.execution_count, stats.average_time_us
+    );
 
     Ok(())
 }

@@ -59,7 +59,8 @@ fn test_reshape_incompatible_size() {
         vec![2, 2],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // Cannot reshape 4 elements to 6 elements
     assert!(a.reshape(&[2, 3]).is_err());
@@ -129,7 +130,8 @@ fn test_squeeze_wrong_dimension() {
         vec![2, 2],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // Cannot squeeze dimension that's not 1
     assert!(a.squeeze_dim(0).is_err());
@@ -196,7 +198,8 @@ fn test_permute_invalid() {
         vec![2, 2],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // Invalid permutation (repeated index)
     assert!(a.permute(&[0, 0]).is_err());
@@ -258,7 +261,8 @@ fn test_slice_invalid_range() {
         vec![4],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // End > length
     assert!(a.slice(0, 0, 10).is_err());

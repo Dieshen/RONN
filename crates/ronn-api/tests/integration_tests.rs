@@ -16,8 +16,8 @@ fn test_full_inference_workflow() {
     require_fixture!("simple_model.onnx");
 
     // Load model
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     // Create session with default options
     let session = model
@@ -57,8 +57,8 @@ fn test_full_inference_workflow() {
 fn test_inference_with_optimization_o0() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O0);
 
@@ -87,8 +87,8 @@ fn test_inference_with_optimization_o0() {
 fn test_inference_with_optimization_o3() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O3);
 
@@ -117,8 +117,8 @@ fn test_inference_with_optimization_o3() {
 fn test_missing_input_error() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = model
         .create_session_default()
@@ -140,8 +140,8 @@ fn test_missing_input_error() {
 fn test_extra_inputs_ignored_or_error() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = model
         .create_session_default()
@@ -174,8 +174,8 @@ fn test_extra_inputs_ignored_or_error() {
 fn test_batch_processing() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = model
         .create_session_default()
@@ -209,8 +209,8 @@ fn test_batch_processing() {
 fn test_multiple_sessions_same_model() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     // Create multiple sessions
     let session1 = model
@@ -252,8 +252,8 @@ fn test_multiple_sessions_same_model() {
 fn test_session_reuse() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = model
         .create_session_default()
@@ -279,8 +279,8 @@ fn test_session_reuse() {
 fn test_inference_with_different_providers() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let providers = vec![ProviderType::CPU, ProviderType::GPU];
 
@@ -318,17 +318,22 @@ fn test_inference_with_different_providers() {
 fn test_zero_sized_batch() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = model
         .create_session_default()
         .expect("Failed to create session");
 
     let empty_batch: Vec<HashMap<&str, Tensor>> = Vec::new();
-    let results = session.run_batch(empty_batch).expect("Empty batch should succeed");
+    let results = session
+        .run_batch(empty_batch)
+        .expect("Empty batch should succeed");
 
-    assert!(results.is_empty(), "Empty batch should produce empty results");
+    assert!(
+        results.is_empty(),
+        "Empty batch should produce empty results"
+    );
 }
 
 #[test]
@@ -336,8 +341,8 @@ fn test_zero_sized_batch() {
 fn test_large_batch() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = model
         .create_session_default()
@@ -365,8 +370,8 @@ fn test_large_batch() {
 fn test_session_options_preserved() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let options = SessionOptions::new()
         .with_optimization_level(OptimizationLevel::O3)

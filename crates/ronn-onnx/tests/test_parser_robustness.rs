@@ -1,9 +1,9 @@
 //! Property-based and fuzzing tests for ONNX parser robustness
 //! Tests: Malformed inputs, boundary conditions, invalid protobuf data
 
-use ronn_onnx::ModelLoader;
-use ronn_onnx::onnx_proto::*;
 use prost::Message;
+use ronn_onnx::onnx_proto::*;
+use ronn_onnx::ModelLoader;
 
 // Helper functions to create common protobuf structures with less boilerplate
 fn dim_value(val: i64) -> tensor_shape_proto::Dimension {
@@ -58,8 +58,8 @@ fn test_partial_json() {
 #[test]
 fn test_invalid_unicode() {
     let invalid_utf8 = vec![
-        b'{', b'"', b'n', b'a', b'm', b'e', b'"', b':', b'"',
-        0xFF, 0xFE, // Invalid UTF-8 sequence
+        b'{', b'"', b'n', b'a', b'm', b'e', b'"', b':', b'"', 0xFF,
+        0xFE, // Invalid UTF-8 sequence
         b'"', b'}',
     ];
     let result = ModelLoader::load_from_bytes(&invalid_utf8);
@@ -405,7 +405,7 @@ fn test_empty_arrays() {
             node: vec![NodeProto {
                 name: "test_node".to_string(),
                 op_type: "Test".to_string(),
-                input: vec![], // Empty input array
+                input: vec![],  // Empty input array
                 output: vec![], // Empty output array
                 attribute: vec![AttributeProto {
                     name: "empty_ints".to_string(),
@@ -526,7 +526,7 @@ fn test_extreme_float_values() {
                         f: f32::NAN,
                         r#type: attribute_proto::AttributeType::Float as i32,
                         ..Default::default()
-                    }
+                    },
                 ],
                 ..Default::default()
             }],
@@ -568,7 +568,7 @@ fn test_extreme_int_values() {
                         i: i64::MIN,
                         r#type: attribute_proto::AttributeType::Int as i32,
                         ..Default::default()
-                    }
+                    },
                 ],
                 ..Default::default()
             }],

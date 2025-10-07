@@ -52,7 +52,8 @@ impl Tensor {
                 CandleTensor::from_vec(f16_data, candle_shape, &device)?
             }
             DataType::BF16 => {
-                let bf16_data: Vec<half::bf16> = data.into_iter().map(half::bf16::from_f32).collect();
+                let bf16_data: Vec<half::bf16> =
+                    data.into_iter().map(half::bf16::from_f32).collect();
                 CandleTensor::from_vec(bf16_data, candle_shape, &device)?
             }
             DataType::F64 => {

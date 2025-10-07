@@ -8,9 +8,9 @@
 //! python scripts/generate_test_model.py
 //! ```
 
-use ronn_onnx::ModelLoader;
 use ronn_core::tensor::Tensor;
 use ronn_core::types::{DataType, TensorLayout};
+use ronn_onnx::ModelLoader;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -59,7 +59,10 @@ fn load_onnx_model_if_available() -> Result<(), Box<dyn std::error::Error>> {
                     println!("   Graph: {}", loaded_model.graph().node_count());
                     println!("   Inputs: {} tensors", loaded_model.inputs().len());
                     println!("   Outputs: {} tensors", loaded_model.outputs().len());
-                    println!("   Initializers: {} weights", loaded_model.initializers().len());
+                    println!(
+                        "   Initializers: {} weights",
+                        loaded_model.initializers().len()
+                    );
 
                     // Display input information
                     for input in loaded_model.inputs() {
@@ -136,7 +139,11 @@ fn demonstrate_manual_inference() -> Result<(), Box<dyn std::error::Error>> {
 
     // Simulate Add operation (in real implementation, this would use the operator registry)
     // For now, manually compute the result
-    let z_data: Vec<f32> = x_data.iter().zip(y_data.iter()).map(|(a, b)| a + b).collect();
+    let z_data: Vec<f32> = x_data
+        .iter()
+        .zip(y_data.iter())
+        .map(|(a, b)| a + b)
+        .collect();
 
     println!("  Output Z: {:?}", z_data);
     println!("  ✅ Operation completed successfully!");

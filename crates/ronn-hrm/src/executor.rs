@@ -203,7 +203,12 @@ mod tests {
         let executor = LowLevelExecutor::new();
 
         let data = vec![1.0f32, 2.0, 3.0, 4.0];
-        let input = Tensor::from_data(data.clone(), vec![1, 4], DataType::F32, TensorLayout::RowMajor)?;
+        let input = Tensor::from_data(
+            data.clone(),
+            vec![1, 4],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         let output = executor.execute(&input)?;
 

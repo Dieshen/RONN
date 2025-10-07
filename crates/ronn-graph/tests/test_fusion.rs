@@ -11,7 +11,10 @@ fn test_fusion_pass_runs() {
     let pass = NodeFusionPass;
 
     let result = pass.run(&mut graph);
-    assert!(result.is_ok(), "Node fusion pass should complete successfully");
+    assert!(
+        result.is_ok(),
+        "Node fusion pass should complete successfully"
+    );
 }
 
 #[test]
@@ -60,11 +63,17 @@ fn test_fusion_preserves_graph_validity() {
     let mut graph = create_fusible_graph();
     let pass = NodeFusionPass;
 
-    assert!(verify_graph_valid(&graph), "Graph should be valid before fusion");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid before fusion"
+    );
 
     pass.run(&mut graph).unwrap();
 
-    assert!(verify_graph_valid(&graph), "Graph should remain valid after fusion");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should remain valid after fusion"
+    );
 }
 
 #[test]
@@ -95,8 +104,14 @@ fn test_fusion_stats_structure() {
     let stats = pass.run(&mut graph).unwrap();
 
     // Verify stats structure is valid
-    assert_eq!(stats.nodes_removed, 0, "Fusion pass should not remove nodes directly");
-    assert_eq!(stats.nodes_modified, 0, "Fusion pass should not modify nodes directly");
+    assert_eq!(
+        stats.nodes_removed, 0,
+        "Fusion pass should not remove nodes directly"
+    );
+    assert_eq!(
+        stats.nodes_modified, 0,
+        "Fusion pass should not modify nodes directly"
+    );
     // nodes_fused may be > 0 if patterns are found
 }
 
@@ -164,17 +179,11 @@ fn test_fusion_multiple_patterns() {
         .add_input(add_id, "matmul_output")
         .add_output(add_id, "output_tensor");
 
-    builder
-        .connect(input_id, conv_id, "input_tensor")
-        .unwrap();
+    builder.connect(input_id, conv_id, "input_tensor").unwrap();
     builder.connect(conv_id, bn_id, "conv_output").unwrap();
     builder.connect(bn_id, relu_id, "bn_output").unwrap();
-    builder
-        .connect(relu_id, matmul_id, "relu_output")
-        .unwrap();
-    builder
-        .connect(matmul_id, add_id, "matmul_output")
-        .unwrap();
+    builder.connect(relu_id, matmul_id, "relu_output").unwrap();
+    builder.connect(matmul_id, add_id, "matmul_output").unwrap();
 
     builder
         .set_inputs(vec!["input_tensor".to_string()])
@@ -210,9 +219,7 @@ fn test_fusion_partial_pattern() {
         .add_input(bn_id, "conv_output")
         .add_output(bn_id, "output_tensor");
 
-    builder
-        .connect(input_id, conv_id, "input_tensor")
-        .unwrap();
+    builder.connect(input_id, conv_id, "input_tensor").unwrap();
     builder.connect(conv_id, bn_id, "conv_output").unwrap();
 
     builder
@@ -253,9 +260,7 @@ fn test_fusion_with_branching() {
         .add_input(relu_id, "conv_output")
         .add_output(relu_id, "relu_output");
 
-    builder
-        .connect(input_id, conv_id, "input_tensor")
-        .unwrap();
+    builder.connect(input_id, conv_id, "input_tensor").unwrap();
     builder.connect(conv_id, bn_id, "conv_output").unwrap();
     builder.connect(conv_id, relu_id, "conv_output").unwrap();
 

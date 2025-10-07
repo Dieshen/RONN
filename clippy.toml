@@ -10,24 +10,11 @@ missing-docs-in-crate-items = true
 # Performance optimizations
 avoid-breaking-exported-api = false
 
-# Allowed lints for research/experimental code
-allowed-lints = [
-    # Allow TODO comments in development
-    "todo",
-    # Allow missing docs for internal types during development
-    "missing_docs",
-    # Allow module inception for clear organization
-    "module_inception",
-    # Allow large enums for comprehensive type systems
-    "large_enum_variant",
-    # Allow complex types for ML operations
-    "type_complexity",
-]
-
-# Disallowed lints that should always be errors
-disallowed-lints = [
-    "unsafe_code",
-    "panic",
-    "unimplemented",
-    "unreachable",
-]
+# Note: Specific lint allows/denies should be set via attributes in code:
+# #[allow(clippy::todo)] or #![deny(clippy::panic)]
+# The following lints are commonly allowed in this project:
+# - clippy::todo (development phase)
+# - clippy::missing_docs (internal types)
+# - clippy::module_inception (clear organization)
+# - clippy::large_enum_variant (comprehensive type systems)
+# - clippy::type_complexity (ML operations)

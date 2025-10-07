@@ -2,7 +2,7 @@
 //
 // Run with: cargo bench --package ronn-graph
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use ronn_core::{GraphBuilder, ModelGraph};
 use ronn_graph::{
     ConstantFoldingPass, CpuOptimizationPass, DeadCodeEliminationPass, GpuOptimizationPass,
@@ -102,9 +102,7 @@ fn create_wide_graph(width: usize) -> ModelGraph {
             .add_input(conv_id, "input_tensor")
             .add_output(conv_id, &output_name);
 
-        builder
-            .connect(input_id, conv_id, "input_tensor")
-            .unwrap();
+        builder.connect(input_id, conv_id, "input_tensor").unwrap();
 
         output_tensors.push(output_name);
     }
@@ -158,15 +156,19 @@ fn bench_node_fusion_pass(c: &mut Criterion) {
     let mut group = c.benchmark_group("node_fusion_pass");
 
     for layers in [5, 10, 20, 40] {
-        group.bench_with_input(BenchmarkId::from_parameter(layers), &layers, |b, &layers| {
-            let graph = create_fusible_graph(layers);
-            let pass = NodeFusionPass;
+        group.bench_with_input(
+            BenchmarkId::from_parameter(layers),
+            &layers,
+            |b, &layers| {
+                let graph = create_fusible_graph(layers);
+                let pass = NodeFusionPass;
 
-            b.iter(|| {
-                let mut g = graph.clone();
-                black_box(pass.run(&mut g).unwrap())
-            });
-        });
+                b.iter(|| {
+                    let mut g = graph.clone();
+                    black_box(pass.run(&mut g).unwrap())
+                });
+            },
+        );
     }
 
     group.finish();
@@ -250,15 +252,19 @@ fn bench_optimizer_o2(c: &mut Criterion) {
     let mut group = c.benchmark_group("optimizer_o2");
 
     for layers in [5, 10, 20, 40] {
-        group.bench_with_input(BenchmarkId::from_parameter(layers), &layers, |b, &layers| {
-            let graph = create_fusible_graph(layers);
-            let optimizer = Optimizer::new(OptimizationLevel::O2);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(layers),
+            &layers,
+            |b, &layers| {
+                let graph = create_fusible_graph(layers);
+                let optimizer = Optimizer::new(OptimizationLevel::O2);
 
-            b.iter(|| {
-                let mut g = graph.clone();
-                black_box(optimizer.optimize(&mut g).unwrap())
-            });
-        });
+                b.iter(|| {
+                    let mut g = graph.clone();
+                    black_box(optimizer.optimize(&mut g).unwrap())
+                });
+            },
+        );
     }
 
     group.finish();
@@ -268,15 +274,19 @@ fn bench_optimizer_o3(c: &mut Criterion) {
     let mut group = c.benchmark_group("optimizer_o3");
 
     for layers in [5, 10, 20, 40] {
-        group.bench_with_input(BenchmarkId::from_parameter(layers), &layers, |b, &layers| {
-            let graph = create_fusible_graph(layers);
-            let optimizer = Optimizer::new(OptimizationLevel::O3);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(layers),
+            &layers,
+            |b, &layers| {
+                let graph = create_fusible_graph(layers);
+                let optimizer = Optimizer::new(OptimizationLevel::O3);
 
-            b.iter(|| {
-                let mut g = graph.clone();
-                black_box(optimizer.optimize(&mut g).unwrap())
-            });
-        });
+                b.iter(|| {
+                    let mut g = graph.clone();
+                    black_box(optimizer.optimize(&mut g).unwrap())
+                });
+            },
+        );
     }
 
     group.finish();

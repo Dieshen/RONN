@@ -4,9 +4,9 @@
 //! including binary (-1, +1) and ternary (-1, 0, +1) quantization with
 //! bit-packed storage for maximum efficiency.
 
-use std::fmt::Debug;
 use anyhow::Result;
 use ronn_core::{DataType, Tensor, TensorLayout};
+use std::fmt::Debug;
 
 /// Quantization methods supported by BitNet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,7 +40,9 @@ impl BitNetQuantizer {
     /// Quantize a FP32 tensor to binary representation.
     pub fn quantize_binary(&self, input: &Tensor) -> Result<BinaryTensor> {
         if input.dtype() != DataType::F32 {
-            return Err(anyhow::anyhow!("BitNet quantization requires FP32 input tensors"));
+            return Err(anyhow::anyhow!(
+                "BitNet quantization requires FP32 input tensors"
+            ));
         }
 
         let data = input.data();
@@ -64,7 +66,9 @@ impl BitNetQuantizer {
     /// Quantize a FP32 tensor to ternary representation.
     pub fn quantize_ternary(&self, input: &Tensor) -> Result<TernaryTensor> {
         if input.dtype() != DataType::F32 {
-            return Err(anyhow::anyhow!("BitNet quantization requires FP32 input tensors"));
+            return Err(anyhow::anyhow!(
+                "BitNet quantization requires FP32 input tensors"
+            ));
         }
 
         let data = input.data();
@@ -75,8 +79,15 @@ impl BitNetQuantizer {
         let threshold = data.iter().map(|&x| x.abs()).sum::<f32>() / total_elements as f32 * 0.7;
 
         // Calculate scale factor for non-zero elements
-        let non_zero_values: Vec<f32> = data.iter()
-            .filter_map(|&x| if x.abs() > threshold { Some(x.abs()) } else { None })
+        let non_zero_values: Vec<f32> = data
+            .iter()
+            .filter_map(|&x| {
+                if x.abs() > threshold {
+                    Some(x.abs())
+                } else {
+                    None
+                }
+            })
             .collect();
 
         let scale = if non_zero_values.is_empty() {
@@ -159,7 +170,12 @@ impl BitNetQuantizer {
             data.push(float_value);
         }
 
-        Tensor::from_data(data, binary_tensor.shape.clone(), DataType::F32, TensorLayout::RowMajor)
+        Tensor::from_data(
+            data,
+            binary_tensor.shape.clone(),
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
     }
 
     /// Dequantize ternary tensor back to FP32.
@@ -174,15 +190,20 @@ impl BitNetQuantizer {
             let bit_pair = (ternary_tensor.packed_data[byte_idx] >> bit_offset) & 0b11;
             let float_value = match bit_pair {
                 0b00 => -ternary_tensor.scale, // -1
-                0b01 => 0.0,                    // 0
-                0b10 => ternary_tensor.scale,   // +1
-                _ => 0.0, // Invalid, default to zero
+                0b01 => 0.0,                   // 0
+                0b10 => ternary_tensor.scale,  // +1
+                _ => 0.0,                      // Invalid, default to zero
             };
 
             data.push(float_value);
         }
 
-        Tensor::from_data(data, ternary_tensor.shape.clone(), DataType::F32, TensorLayout::RowMajor)
+        Tensor::from_data(
+            data,
+            ternary_tensor.shape.clone(),
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )
     }
 }
 
@@ -332,10 +353,10 @@ mod tests {
         let ternary_tensor = quantizer.quantize_ternary(&tensor)?;
 
         // Test individual value access
-        assert_eq!(ternary_tensor.get_value(0), 1);   // 1.5 -> 1
-        assert_eq!(ternary_tensor.get_value(1), -1);  // -2.0 -> -1
-        assert_eq!(ternary_tensor.get_value(2), 0);   // 0.1 -> 0 (below threshold)
-        assert_eq!(ternary_tensor.get_value(3), 0);   // -0.05 -> 0 (below threshold)
+        assert_eq!(ternary_tensor.get_value(0), 1); // 1.5 -> 1
+        assert_eq!(ternary_tensor.get_value(1), -1); // -2.0 -> -1
+        assert_eq!(ternary_tensor.get_value(2), 0); // 0.1 -> 0 (below threshold)
+        assert_eq!(ternary_tensor.get_value(3), 0); // -0.05 -> 0 (below threshold)
 
         Ok(())
     }

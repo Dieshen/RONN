@@ -93,11 +93,7 @@ fn test_from_onnx_unsupported_types() {
 
     for onnx_type in unsupported {
         let result = DataTypeMapper::from_onnx(onnx_type);
-        assert!(
-            result.is_err(),
-            "Type {} should be unsupported",
-            onnx_type
-        );
+        assert!(result.is_err(), "Type {} should be unsupported", onnx_type);
     }
 }
 
@@ -179,7 +175,11 @@ fn test_all_ronn_types_mappable() {
     for dtype in all_types {
         let onnx_type = DataTypeMapper::to_onnx(dtype);
         // Should be a valid ONNX type code
-        assert!(onnx_type > 0 && onnx_type < 20, "Invalid ONNX type code for {:?}", dtype);
+        assert!(
+            onnx_type > 0 && onnx_type < 20,
+            "Invalid ONNX type code for {:?}",
+            dtype
+        );
     }
 }
 
@@ -201,7 +201,10 @@ fn test_large_type_code() {
 fn test_zero_type_code() {
     // UNDEFINED type
     let result = DataTypeMapper::from_onnx(0);
-    assert!(result.is_err(), "UNDEFINED type (0) should not be supported");
+    assert!(
+        result.is_err(),
+        "UNDEFINED type (0) should not be supported"
+    );
 }
 
 // ============ Type Consistency Tests ============
@@ -241,12 +244,7 @@ fn test_type_mapping_consistency() {
 
 #[test]
 fn test_floating_point_type_family() {
-    let float_types = vec![
-        DataType::F32,
-        DataType::F16,
-        DataType::BF16,
-        DataType::F64,
-    ];
+    let float_types = vec![DataType::F32, DataType::F16, DataType::BF16, DataType::F64];
 
     for dtype in float_types {
         let onnx_code = DataTypeMapper::to_onnx(dtype);
@@ -373,7 +371,10 @@ fn test_type_mapper_deterministic() {
     for (onnx_type, expected_ronn) in test_cases {
         for _ in 0..10 {
             let result = DataTypeMapper::from_onnx(onnx_type).unwrap();
-            assert_eq!(result, expected_ronn, "Type mapping should be deterministic");
+            assert_eq!(
+                result, expected_ronn,
+                "Type mapping should be deterministic"
+            );
         }
     }
 }

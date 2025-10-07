@@ -147,7 +147,7 @@ impl CustomProviderRegistry {
             // Look for dynamic libraries
             if let Some(extension) = path.extension() {
                 let is_plugin = match extension.to_str() {
-                    Some("so") => true,   // Linux
+                    Some("so") => true,    // Linux
                     Some("dylib") => true, // macOS
                     Some("dll") => true,   // Windows
                     _ => false,
@@ -203,7 +203,10 @@ impl CustomProviderRegistry {
         name: String,
         provider: Arc<dyn CustomHardwareProvider>,
     ) -> Result<()> {
-        let mut providers = self.providers.write().map_err(|_| anyhow!("Lock poisoned"))?;
+        let mut providers = self
+            .providers
+            .write()
+            .map_err(|_| anyhow!("Lock poisoned"))?;
 
         if providers.contains_key(&name) {
             return Err(anyhow!("Provider {} already registered", name));
@@ -240,7 +243,10 @@ impl CustomProviderRegistry {
 
     /// Unregister a provider.
     pub fn unregister_provider(&mut self, name: &str) -> Result<()> {
-        let mut providers = self.providers.write().map_err(|_| anyhow!("Lock poisoned"))?;
+        let mut providers = self
+            .providers
+            .write()
+            .map_err(|_| anyhow!("Lock poisoned"))?;
 
         if providers.remove(name).is_some() {
             self.plugin_metadata.remove(name);
@@ -263,23 +269,25 @@ impl CustomProviderRegistry {
 
     /// Get registry statistics.
     pub fn get_statistics(&self) -> RegistryStatistics {
-        let provider_count = self.providers
+        let provider_count = self
+            .providers
             .read()
             .map(|providers| providers.len())
             .unwrap_or(0);
 
-        let plugin_status_counts = self.plugin_metadata
-            .values()
-            .fold(HashMap::new(), |mut acc, metadata| {
-                let status_key = match &metadata.status {
-                    PluginStatus::Loaded => "loaded",
-                    PluginStatus::LoadError(_) => "error",
-                    PluginStatus::Disabled => "disabled",
-                    PluginStatus::Incompatible => "incompatible",
-                };
-                *acc.entry(status_key.to_string()).or_insert(0) += 1;
-                acc
-            });
+        let plugin_status_counts =
+            self.plugin_metadata
+                .values()
+                .fold(HashMap::new(), |mut acc, metadata| {
+                    let status_key = match &metadata.status {
+                        PluginStatus::Loaded => "loaded",
+                        PluginStatus::LoadError(_) => "error",
+                        PluginStatus::Disabled => "disabled",
+                        PluginStatus::Incompatible => "incompatible",
+                    };
+                    *acc.entry(status_key.to_string()).or_insert(0) += 1;
+                    acc
+                });
 
         RegistryStatistics {
             registered_providers: provider_count,
@@ -318,14 +326,19 @@ impl CustomProviderRegistry {
         if metadata.abi_version != CURRENT_ABI_VERSION {
             return Err(anyhow!(
                 "Plugin {} has incompatible ABI version: {} (expected {})",
-                metadata.name, metadata.abi_version, CURRENT_ABI_VERSION
+                metadata.name,
+                metadata.abi_version,
+                CURRENT_ABI_VERSION
             ));
         }
 
         // Check minimum RONN version
         // In a real implementation, this would do proper version comparison
         if metadata.min_ronn_version.is_empty() {
-            warn!("Plugin {} does not specify minimum RONN version", metadata.name);
+            warn!(
+                "Plugin {} does not specify minimum RONN version",
+                metadata.name
+            );
         }
 
         Ok(())
@@ -333,7 +346,10 @@ impl CustomProviderRegistry {
 
     /// Cleanup and shutdown all providers.
     pub fn shutdown(&mut self) -> Result<()> {
-        let providers = self.providers.read().map_err(|_| anyhow!("Lock poisoned"))?;
+        let providers = self
+            .providers
+            .read()
+            .map_err(|_| anyhow!("Lock poisoned"))?;
 
         for (name, _provider) in providers.iter() {
             debug!("Shutting down provider: {}", name);
@@ -430,7 +446,10 @@ mod tests {
             Ok(())
         }
 
-        fn compile_subgraph(&self, _subgraph: &ronn_core::SubGraph) -> Result<Box<dyn super::super::traits::CustomKernel>> {
+        fn compile_subgraph(
+            &self,
+            _subgraph: &ronn_core::SubGraph,
+        ) -> Result<Box<dyn super::super::traits::CustomKernel>> {
             Err(anyhow!("Not implemented"))
         }
 
@@ -498,7 +517,9 @@ mod tests {
             name: "test_provider".to_string(),
         });
 
-        registry.register_provider("test_provider".to_string(), provider1).unwrap();
+        registry
+            .register_provider("test_provider".to_string(), provider1)
+            .unwrap();
 
         let result = registry.register_provider("test_provider".to_string(), provider2);
         assert!(result.is_err());

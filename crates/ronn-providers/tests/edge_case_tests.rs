@@ -10,12 +10,12 @@
 
 use anyhow::Result;
 use ronn_core::{
-    DataType, ExecutionProvider, GraphNode, MemoryType, OperatorSpec, ProviderId, SubGraph,
-    TensorAllocator, Tensor, TensorLayout,
+    DataType, ExecutionProvider, GraphNode, MemoryType, OperatorSpec, ProviderId, SubGraph, Tensor,
+    TensorAllocator, TensorLayout,
 };
 use ronn_providers::{
-    create_cpu_provider, ProviderRegistry, SystemMemoryAllocator, PooledMemoryAllocator,
-    PoolConfig, cpu::CpuExecutionProvider, cpu::CpuProviderConfig,
+    cpu::CpuExecutionProvider, cpu::CpuProviderConfig, create_cpu_provider, PoolConfig,
+    PooledMemoryAllocator, ProviderRegistry, SystemMemoryAllocator,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -561,7 +561,10 @@ fn test_alternating_allocation_sizes() -> Result<()> {
 
     // Pool should have handled various sizes
     let stats = allocator.get_pool_stats();
-    println!("Pool stats after alternating sizes: hit rate = {:.2}%", allocator.get_hit_rate() * 100.0);
+    println!(
+        "Pool stats after alternating sizes: hit rate = {:.2}%",
+        allocator.get_hit_rate() * 100.0
+    );
 
     Ok(())
 }

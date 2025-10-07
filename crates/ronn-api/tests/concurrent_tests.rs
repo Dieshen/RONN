@@ -16,8 +16,8 @@ use std::thread;
 fn test_concurrent_inference_same_session() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = Arc::new(
         model
@@ -108,10 +108,7 @@ fn test_concurrent_session_creation() {
 
     for handle in handles {
         let result = handle.join().expect("Thread panicked");
-        assert!(
-            result.is_ok(),
-            "Concurrent session creation should succeed"
-        );
+        assert!(result.is_ok(), "Concurrent session creation should succeed");
     }
 }
 
@@ -142,8 +139,8 @@ fn test_model_dropped_with_active_sessions() {
     require_fixture!("simple_model.onnx");
 
     let session = {
-        let model = Model::load(common::fixture_path("simple_model.onnx"))
-            .expect("Failed to load model");
+        let model =
+            Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
         model
             .create_session_default()
@@ -170,8 +167,8 @@ fn test_model_dropped_with_active_sessions() {
 fn test_rapid_session_creation_destruction() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     // Create and destroy sessions rapidly
     for _ in 0..100 {
@@ -210,9 +207,15 @@ fn test_session_with_different_optimization_levels_concurrent() {
                 let session = model.create_session(options)?;
 
                 let mut inputs = HashMap::new();
-                let tensor =
-                    Tensor::from_data(vec![1.0; 10], vec![1, 10], DataType::F32, TensorLayout::RowMajor)
-                        .map_err(|e| ronn_api::Error::InferenceError(format!("Tensor creation failed: {}", e)))?;
+                let tensor = Tensor::from_data(
+                    vec![1.0; 10],
+                    vec![1, 10],
+                    DataType::F32,
+                    TensorLayout::RowMajor,
+                )
+                .map_err(|e| {
+                    ronn_api::Error::InferenceError(format!("Tensor creation failed: {}", e))
+                })?;
 
                 let input_name = model.input_names()[0];
                 inputs.insert(input_name, tensor);
@@ -223,7 +226,10 @@ fn test_session_with_different_optimization_levels_concurrent() {
 
     for handle in handles {
         let result = handle.join().expect("Thread panicked");
-        assert!(result.is_ok(), "Concurrent inference with different optimization levels should succeed");
+        assert!(
+            result.is_ok(),
+            "Concurrent inference with different optimization levels should succeed"
+        );
     }
 }
 
@@ -250,8 +256,8 @@ fn test_thread_count_very_large() {
 fn test_empty_tensor_input() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = model
         .create_session_default()
@@ -275,8 +281,8 @@ fn test_empty_tensor_input() {
 fn test_very_large_tensor() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = model
         .create_session_default()
@@ -288,12 +294,7 @@ fn test_very_large_tensor() {
     let size = 2_500_000;
     let data: Vec<f32> = (0..size).map(|i| (i % 100) as f32).collect();
 
-    let result = Tensor::from_data(
-        data,
-        vec![1, size],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    );
+    let result = Tensor::from_data(data, vec![1, size], DataType::F32, TensorLayout::RowMajor);
 
     // This might fail due to memory constraints or model input constraints
     if let Ok(tensor) = result {
@@ -352,8 +353,8 @@ fn test_session_outlives_model_reference() {
     require_fixture!("simple_model.onnx");
 
     let session = {
-        let model = Model::load(common::fixture_path("simple_model.onnx"))
-            .expect("Failed to load model");
+        let model =
+            Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
         let sess = model
             .create_session_default()
@@ -392,8 +393,8 @@ fn test_model_send_sync() {
 fn test_memory_leak_repeated_inference() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load model");
 
     let session = model
         .create_session_default()
@@ -443,13 +444,9 @@ fn test_concurrent_batch_processing() {
                     let data: Vec<f32> = (0..10)
                         .map(|x| (x + i * 10 + batch_id * 100) as f32)
                         .collect();
-                    let tensor = Tensor::from_data(
-                        data,
-                        vec![1, 10],
-                        DataType::F32,
-                        TensorLayout::RowMajor,
-                    )
-                    .expect("Failed to create tensor");
+                    let tensor =
+                        Tensor::from_data(data, vec![1, 10], DataType::F32, TensorLayout::RowMajor)
+                            .expect("Failed to create tensor");
 
                     inputs.insert(input_name.as_str(), tensor);
                     batch.push(inputs);

@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
-use ronn_core::{CompiledKernel, KernelStats, MemoryUsage, Tensor, DataType, TensorLayout};
+use ronn_core::{CompiledKernel, DataType, KernelStats, MemoryUsage, Tensor, TensorLayout};
 
 /// WASM SIMD128 operations for vectorized computation.
 #[derive(Debug, Clone)]
@@ -135,8 +135,12 @@ impl WasmSimd128Ops {
 
     /// Matrix multiplication using SIMD128 (simplified version).
     pub fn simd_matmul_f32(
-        a: &[f32], b: &[f32], c: &mut [f32],
-        m: usize, n: usize, k: usize
+        a: &[f32],
+        b: &[f32],
+        c: &mut [f32],
+        m: usize,
+        n: usize,
+        k: usize,
     ) -> Result<()> {
         if a.len() != m * k || b.len() != k * n || c.len() != m * n {
             return Err(anyhow!("Matrix dimension mismatch"));
@@ -239,7 +243,11 @@ impl WasmKernel {
         let b = &inputs[1];
 
         if a.shape() != b.shape() {
-            return Err(anyhow!("Shape mismatch for Add: {:?} vs {:?}", a.shape(), b.shape()));
+            return Err(anyhow!(
+                "Shape mismatch for Add: {:?} vs {:?}",
+                a.shape(),
+                b.shape()
+            ));
         }
 
         let mut result_data = vec![0.0f32; a.data().len()];
@@ -249,7 +257,7 @@ impl WasmKernel {
             result_data,
             a.shape().to_vec(),
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         Ok(vec![result])
@@ -265,7 +273,11 @@ impl WasmKernel {
         let b = &inputs[1];
 
         if a.shape() != b.shape() {
-            return Err(anyhow!("Shape mismatch for Mul: {:?} vs {:?}", a.shape(), b.shape()));
+            return Err(anyhow!(
+                "Shape mismatch for Mul: {:?} vs {:?}",
+                a.shape(),
+                b.shape()
+            ));
         }
 
         let mut result_data = vec![0.0f32; a.data().len()];
@@ -275,7 +287,7 @@ impl WasmKernel {
             result_data,
             a.shape().to_vec(),
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         Ok(vec![result])
@@ -303,7 +315,11 @@ impl WasmKernel {
         let n = b_shape[1];
 
         if k != b_shape[0] {
-            return Err(anyhow!("Matrix dimension mismatch: {} != {}", k, b_shape[0]));
+            return Err(anyhow!(
+                "Matrix dimension mismatch: {} != {}",
+                k,
+                b_shape[0]
+            ));
         }
 
         let mut result_data = vec![0.0f32; m * n];
@@ -313,7 +329,7 @@ impl WasmKernel {
             result_data,
             vec![m, n],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         Ok(vec![result])
@@ -334,7 +350,7 @@ impl WasmKernel {
             result_data,
             input.shape().to_vec(),
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         Ok(vec![result])
@@ -347,7 +363,8 @@ impl WasmKernel {
         }
 
         let input = &inputs[0];
-        let result_data: Vec<f32> = input.data()
+        let result_data: Vec<f32> = input
+            .data()
             .iter()
             .map(|&x| 1.0 / (1.0 + (-x).exp()))
             .collect();
@@ -356,7 +373,7 @@ impl WasmKernel {
             result_data,
             input.shape().to_vec(),
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         Ok(vec![result])
@@ -385,7 +402,7 @@ impl WasmKernel {
             result_data,
             input.shape().to_vec(),
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         Ok(vec![result])
@@ -393,7 +410,10 @@ impl WasmKernel {
 
     /// Fallback execution for unsupported operations.
     fn execute_fallback(&self, _inputs: &[Tensor]) -> Result<Vec<Tensor>> {
-        Err(anyhow!("Operation {} not implemented for WASM", self.op_type))
+        Err(anyhow!(
+            "Operation {} not implemented for WASM",
+            self.op_type
+        ))
     }
 
     /// Update performance statistics.
@@ -410,7 +430,8 @@ impl WasmKernel {
 
             // Update running average
             let n = self.stats.execution_count as f64;
-            self.stats.average_time_us = ((n - 1.0) * self.stats.average_time_us + execution_time_us) / n;
+            self.stats.average_time_us =
+                ((n - 1.0) * self.stats.average_time_us + execution_time_us) / n;
         }
     }
 }
@@ -492,8 +513,18 @@ mod tests {
     fn test_wasm_kernel_add() -> Result<()> {
         let kernel = create_wasm_kernel("Add");
 
-        let a = Tensor::from_data(vec![1.0, 2.0, 3.0], vec![3], DataType::F32, TensorLayout::RowMajor)?;
-        let b = Tensor::from_data(vec![4.0, 5.0, 6.0], vec![3], DataType::F32, TensorLayout::RowMajor)?;
+        let a = Tensor::from_data(
+            vec![1.0, 2.0, 3.0],
+            vec![3],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
+        let b = Tensor::from_data(
+            vec![4.0, 5.0, 6.0],
+            vec![3],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         let results = kernel.execute(&[a, b])?;
 
@@ -507,8 +538,18 @@ mod tests {
     fn test_wasm_kernel_matmul() -> Result<()> {
         let kernel = create_wasm_kernel("MatMul");
 
-        let a = Tensor::from_data(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2], DataType::F32, TensorLayout::RowMajor)?;
-        let b = Tensor::from_data(vec![5.0, 6.0, 7.0, 8.0], vec![2, 2], DataType::F32, TensorLayout::RowMajor)?;
+        let a = Tensor::from_data(
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
+        let b = Tensor::from_data(
+            vec![5.0, 6.0, 7.0, 8.0],
+            vec![2, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         let results = kernel.execute(&[a, b])?;
 
@@ -523,7 +564,12 @@ mod tests {
     fn test_wasm_kernel_relu() -> Result<()> {
         let kernel = create_wasm_kernel("ReLU");
 
-        let input = Tensor::from_data(vec![-1.0, 0.0, 1.0, -2.0, 3.0], vec![5], DataType::F32, TensorLayout::RowMajor)?;
+        let input = Tensor::from_data(
+            vec![-1.0, 0.0, 1.0, -2.0, 3.0],
+            vec![5],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         let results = kernel.execute(&[input])?;
 
@@ -537,7 +583,8 @@ mod tests {
     fn test_unsupported_operation() {
         let kernel = create_wasm_kernel("UnsupportedOp");
 
-        let input = Tensor::from_data(vec![1.0], vec![1], DataType::F32, TensorLayout::RowMajor).unwrap();
+        let input =
+            Tensor::from_data(vec![1.0], vec![1], DataType::F32, TensorLayout::RowMajor).unwrap();
         let result = kernel.execute(&[input]);
 
         assert!(result.is_err());

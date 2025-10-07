@@ -184,7 +184,11 @@ impl CudaKernelManager {
     }
 
     /// Get or compile a kernel for a specific operation type.
-    pub fn get_optimized_kernel(&self, op_type: &str, tensor_shape: &[usize]) -> Result<CompiledCudaKernel> {
+    pub fn get_optimized_kernel(
+        &self,
+        op_type: &str,
+        tensor_shape: &[usize],
+    ) -> Result<CompiledCudaKernel> {
         let kernel_source = match op_type {
             "FusedMatMulBias" => CudaKernelTemplates::fused_matmul_bias_kernel(tensor_shape),
             "OptimizedSoftmax" => CudaKernelTemplates::optimized_softmax_kernel(tensor_shape),
@@ -192,7 +196,12 @@ impl CudaKernelManager {
             "WarpReduceSum" => CudaKernelTemplates::warp_reduce_sum_kernel(tensor_shape),
             "TensorCoreGemm" => CudaKernelTemplates::tensor_core_gemm_kernel(tensor_shape),
             "FastGelu" => CudaKernelTemplates::fast_gelu_kernel(tensor_shape),
-            _ => return Err(anyhow!("No optimized CUDA kernel available for operation: {}", op_type)),
+            _ => {
+                return Err(anyhow!(
+                    "No optimized CUDA kernel available for operation: {}",
+                    op_type
+                ))
+            }
         };
 
         let kernel_name = format!("{}_{}", op_type, self.shape_hash(tensor_shape));
@@ -226,7 +235,11 @@ impl CudaKernelManager {
         Ok(source.as_bytes().to_vec())
     }
 
-    fn determine_optimal_launch_config(&self, name: &str, source: &str) -> Result<KernelLaunchConfig> {
+    fn determine_optimal_launch_config(
+        &self,
+        name: &str,
+        source: &str,
+    ) -> Result<KernelLaunchConfig> {
         // Analyze kernel requirements and determine optimal configuration
         let mut config = KernelLaunchConfig::default();
 

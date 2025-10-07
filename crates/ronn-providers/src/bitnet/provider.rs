@@ -75,7 +75,10 @@ impl BitNetExecutionProvider {
 
     /// Create a BitNet execution provider with custom configuration.
     pub fn with_config(config: BitNetProviderConfig) -> Result<Self> {
-        info!("Creating BitNet execution provider with method: {:?}", config.quantization_method);
+        info!(
+            "Creating BitNet execution provider with method: {:?}",
+            config.quantization_method
+        );
 
         let allocator = create_bitnet_allocator();
         let quantizer = Arc::new(BitNetQuantizer::new(config.quantization_method));
@@ -95,7 +98,10 @@ impl BitNetExecutionProvider {
         supported_ops.insert("ReLU".to_string());
         supported_ops.insert("Sigmoid".to_string());
 
-        info!("BitNet provider supports {} operations", supported_ops.len());
+        info!(
+            "BitNet provider supports {} operations",
+            supported_ops.len()
+        );
 
         Ok(Self {
             config,
@@ -132,16 +138,14 @@ impl BitNetExecutionProvider {
                     QuantizationMethod::AsymmetricBinary { .. } => 48.0,
                 }
             }
-            "Conv" => {
-                match self.config.quantization_method {
-                    QuantizationMethod::Binary => 32.0,
-                    QuantizationMethod::Ternary => 24.0,
-                    QuantizationMethod::AsymmetricBinary { .. } => 28.0,
-                }
-            }
+            "Conv" => match self.config.quantization_method {
+                QuantizationMethod::Binary => 32.0,
+                QuantizationMethod::Ternary => 24.0,
+                QuantizationMethod::AsymmetricBinary { .. } => 28.0,
+            },
             "Add" | "Sub" | "Mul" => 16.0, // Element-wise ops benefit from bit operations
             "And" | "Or" | "Xor" => 128.0, // Bitwise ops are extremely fast
-            _ => 4.0, // Conservative estimate for other operations
+            _ => 4.0,                      // Conservative estimate for other operations
         }
     }
 
@@ -158,21 +162,22 @@ impl BitNetExecutionProvider {
                     QuantizationMethod::Binary | QuantizationMethod::AsymmetricBinary { .. } => {
                         Box::new(create_binary_matmul_kernel(m, n, k))
                     }
-                    QuantizationMethod::Ternary => {
-                        Box::new(create_ternary_matmul_kernel(m, n, k))
-                    }
+                    QuantizationMethod::Ternary => Box::new(create_ternary_matmul_kernel(m, n, k)),
                 };
 
                 Ok(kernel)
             }
             "And" | "Or" | "Xor" | "Add" | "Sub" | "Mul" => {
                 let element_count = 1024; // Default size - would be inferred
-                Ok(Box::new(create_binary_elementwise_kernel(&node.op_type, element_count)))
+                Ok(Box::new(create_binary_elementwise_kernel(
+                    &node.op_type,
+                    element_count,
+                )))
             }
             "Conv" => {
                 // Convolution can be implemented as im2col + MatMul
                 let m = 256; // Output channels * spatial dimensions
-                let n = 64;  // Batch size
+                let n = 64; // Batch size
                 let k = 512; // Input channels * kernel size
 
                 Ok(Box::new(create_binary_matmul_kernel(m, n, k)))
@@ -180,18 +185,27 @@ impl BitNetExecutionProvider {
             "ReLU" => {
                 // ReLU for quantized values is essentially a sign operation
                 let element_count = 1024;
-                Ok(Box::new(create_binary_elementwise_kernel("ReLU", element_count)))
+                Ok(Box::new(create_binary_elementwise_kernel(
+                    "ReLU",
+                    element_count,
+                )))
             }
             "BatchNormalization" => {
                 // Simplified quantized batch norm
                 let channels = 64;
                 let spatial_size = 256;
                 Ok(Box::new(BitNetKernel::new(
-                    BitNetOperation::QuantizedBatchNorm { channels, spatial_size },
+                    BitNetOperation::QuantizedBatchNorm {
+                        channels,
+                        spatial_size,
+                    },
                     self.config.quantization_method,
                 )))
             }
-            _ => Err(anyhow!("Unsupported operation for BitNet: {}", node.op_type)),
+            _ => Err(anyhow!(
+                "Unsupported operation for BitNet: {}",
+                node.op_type
+            )),
         }
     }
 
@@ -210,13 +224,15 @@ impl BitNetExecutionProvider {
         }
 
         // Include quantization method
-        format!("bitnet_{}_{:x}",
-                match self.config.quantization_method {
-                    QuantizationMethod::Binary => "bin",
-                    QuantizationMethod::Ternary => "tern",
-                    QuantizationMethod::AsymmetricBinary { .. } => "asym",
-                },
-                hasher.finish())
+        format!(
+            "bitnet_{}_{:x}",
+            match self.config.quantization_method {
+                QuantizationMethod::Binary => "bin",
+                QuantizationMethod::Ternary => "tern",
+                QuantizationMethod::AsymmetricBinary { .. } => "asym",
+            },
+            hasher.finish()
+        )
     }
 }
 
@@ -235,19 +251,19 @@ impl ExecutionProvider for BitNetExecutionProvider {
         ProviderCapability {
             supported_ops: self.supported_ops.clone(),
             data_types: vec![
-                DataType::Bool,  // Binary quantized
-                DataType::U8,    // Ternary quantized
-                DataType::F32,   // Mixed precision activations
-                DataType::F16,   // Mixed precision activations
+                DataType::Bool, // Binary quantized
+                DataType::U8,   // Ternary quantized
+                DataType::F32,  // Mixed precision activations
+                DataType::F16,  // Mixed precision activations
             ],
             memory_types: vec![MemoryType::SystemRAM],
             performance_profile: PerformanceProfile::MemoryOptimized,
             resource_requirements: ResourceRequirements {
                 min_memory_bytes: Some(16 * 1024 * 1024), // 16MB minimum
                 cpu_features: vec![
-                    "popcnt".to_string(),   // Population count for bit operations
-                    "bmi1".to_string(),     // Bit manipulation instructions
-                    "bmi2".to_string(),     // Advanced bit manipulation
+                    "popcnt".to_string(), // Population count for bit operations
+                    "bmi1".to_string(),   // Bit manipulation instructions
+                    "bmi2".to_string(),   // Advanced bit manipulation
                 ],
                 gpu_memory_bytes: None,
             },
@@ -262,7 +278,10 @@ impl ExecutionProvider for BitNetExecutionProvider {
     }
 
     fn compile_subgraph(&self, subgraph: SubGraph) -> Result<Box<dyn CompiledKernel>> {
-        debug!("Compiling BitNet subgraph with {} nodes", subgraph.nodes.len());
+        debug!(
+            "Compiling BitNet subgraph with {} nodes",
+            subgraph.nodes.len()
+        );
 
         // Check cache first
         let cache_key = self.generate_cache_key(&subgraph);
@@ -276,7 +295,9 @@ impl ExecutionProvider for BitNetExecutionProvider {
 
         // For now, compile single-node subgraphs
         if subgraph.nodes.len() != 1 {
-            return Err(anyhow!("BitNet provider currently supports only single-node subgraphs"));
+            return Err(anyhow!(
+                "BitNet provider currently supports only single-node subgraphs"
+            ));
         }
 
         let node = &subgraph.nodes[0];
@@ -335,8 +356,10 @@ impl ExecutionProvider for BitNetExecutionProvider {
             }
         }
 
-        info!("BitNet provider reconfigured with optimization level: {:?}",
-              config.optimization_level);
+        info!(
+            "BitNet provider reconfigured with optimization level: {:?}",
+            config.optimization_level
+        );
         Ok(())
     }
 
@@ -353,7 +376,10 @@ impl ExecutionProvider for BitNetExecutionProvider {
         info!("  Binary tensors: {}", stats.binary_tensor_count);
         info!("  Ternary tensors: {}", stats.ternary_tensor_count);
         info!("  Memory saved: {} bytes", stats.memory_saved_bytes);
-        info!("  Average compression: {:.1}x", stats.average_compression_ratio);
+        info!(
+            "  Average compression: {:.1}x",
+            stats.average_compression_ratio
+        );
 
         Ok(())
     }
@@ -397,7 +423,10 @@ mod tests {
         assert!(capability.supported_ops.contains("And"));
         assert!(capability.data_types.contains(&DataType::Bool));
         assert!(capability.data_types.contains(&DataType::F32));
-        assert_eq!(capability.performance_profile, PerformanceProfile::MemoryOptimized);
+        assert_eq!(
+            capability.performance_profile,
+            PerformanceProfile::MemoryOptimized
+        );
 
         Ok(())
     }
@@ -464,7 +493,10 @@ mod tests {
 
         provider.configure(config)?;
 
-        assert_eq!(provider.config.quantization_method, QuantizationMethod::Ternary);
+        assert_eq!(
+            provider.config.quantization_method,
+            QuantizationMethod::Ternary
+        );
         assert!(!provider.config.enable_mixed_precision);
 
         Ok(())

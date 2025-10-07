@@ -13,9 +13,9 @@ use anyhow::{anyhow, Result};
 use ronn_core::{CompiledKernel, DataType, KernelStats, MemoryUsage, SubGraph, Tensor};
 
 use super::traits::{
-    CustomHardwareProvider, CustomKernel, DeviceMemory, DeviceBuffer, DeviceMemoryInfo,
-    HardwareCapability, PowerProfile, ProviderStats, KernelInfo,
-    HardwareProfiler, ProfilingSession, ProfilingResults, ProfilingSummary,
+    CustomHardwareProvider, CustomKernel, DeviceBuffer, DeviceMemory, DeviceMemoryInfo,
+    HardwareCapability, HardwareProfiler, KernelInfo, PowerProfile, ProfilingResults,
+    ProfilingSession, ProfilingSummary, ProviderStats,
 };
 
 /// Configuration for TPU provider.
@@ -212,7 +212,10 @@ impl TpuProvider {
             features: {
                 let mut features = HashMap::new();
                 features.insert("bfloat16".to_string(), config.enable_bfloat16.to_string());
-                features.insert("matrix_unit_size".to_string(), config.matrix_unit_size.to_string());
+                features.insert(
+                    "matrix_unit_size".to_string(),
+                    config.matrix_unit_size.to_string(),
+                );
                 features.insert("xla_compilation".to_string(), "true".to_string());
                 features.insert("core_count".to_string(), config.core_count.to_string());
                 if config.pod_config.is_some() {
@@ -257,12 +260,20 @@ impl TpuProvider {
     }
 
     /// Configure mesh parallelism for model sharding.
-    pub fn configure_mesh_parallelism(&mut self, data_parallel: u32, model_parallel: u32) -> Result<()> {
+    pub fn configure_mesh_parallelism(
+        &mut self,
+        data_parallel: u32,
+        model_parallel: u32,
+    ) -> Result<()> {
         if let Some(ref mut pod_config) = self.config.pod_config {
             pod_config.data_parallel_replicas = data_parallel;
             pod_config.model_parallel_partitions = model_parallel;
             pod_config.enable_mesh_parallelism = true;
-            tracing::info!("Configured mesh parallelism: {}x{} (data x model)", data_parallel, model_parallel);
+            tracing::info!(
+                "Configured mesh parallelism: {}x{} (data x model)",
+                data_parallel,
+                model_parallel
+            );
             Ok(())
         } else {
             Err(anyhow!("Pod configuration required for mesh parallelism"))
@@ -295,8 +306,11 @@ impl CustomHardwareProvider for TpuProvider {
             return Ok(());
         }
 
-        tracing::info!("Initializing TPU provider: {} cores, {:?}",
-                   self.config.core_count, self.config.generation);
+        tracing::info!(
+            "Initializing TPU provider: {} cores, {:?}",
+            self.config.core_count,
+            self.config.generation
+        );
 
         // Initialize XLA service
         {
@@ -401,11 +415,16 @@ impl TpuKernel {
     ) -> Result<Self> {
         let compilation_start = Instant::now();
 
-        let operations: Vec<String> = subgraph.nodes.iter()
+        let operations: Vec<String> = subgraph
+            .nodes
+            .iter()
             .map(|node| node.op_type.clone())
             .collect();
 
-        let name = format!("tpu_kernel_{}", subgraph.name.as_deref().unwrap_or("unnamed"));
+        let name = format!(
+            "tpu_kernel_{}",
+            subgraph.name.as_deref().unwrap_or("unnamed")
+        );
 
         // Compile with XLA
         let mut xla = xla_service.lock().unwrap();
@@ -413,10 +432,10 @@ impl TpuKernel {
 
         // Estimate memory and execution time based on operations and TPU generation
         let base_memory_per_op = match config.generation {
-            TpuGeneration::V2 => 512 * 1024,       // 512KB
-            TpuGeneration::V3 => 1024 * 1024,      // 1MB
-            TpuGeneration::V4 => 2 * 1024 * 1024,  // 2MB
-            TpuGeneration::V5 => 4 * 1024 * 1024,  // 4MB
+            TpuGeneration::V2 => 512 * 1024,      // 512KB
+            TpuGeneration::V3 => 1024 * 1024,     // 1MB
+            TpuGeneration::V4 => 2 * 1024 * 1024, // 2MB
+            TpuGeneration::V5 => 4 * 1024 * 1024, // 4MB
         };
         let estimated_memory_bytes = operations.len() as u64 * base_memory_per_op;
 
@@ -490,7 +509,11 @@ impl CustomKernel for TpuKernel {
         let mut profiler = self.profiler.lock().unwrap();
         let _results = profiler.stop_profiling(session)?;
 
-        tracing::debug!("TPU kernel '{}' executed in {:?}", self.name, start_time.elapsed());
+        tracing::debug!(
+            "TPU kernel '{}' executed in {:?}",
+            self.name,
+            start_time.elapsed()
+        );
 
         Ok(outputs)
     }
@@ -567,24 +590,37 @@ impl XlaService {
         tracing::debug!("Compiling subgraph to HLO: {}", module_name);
 
         // Simulate HLO compilation
-        let compilation_time = std::time::Duration::from_millis(100 + subgraph.nodes.len() as u64 * 20);
+        let compilation_time =
+            std::time::Duration::from_millis(100 + subgraph.nodes.len() as u64 * 20);
         std::thread::sleep(compilation_time);
 
         // Generate dummy HLO module
-        let hlo_module = format!("HloModule {}\n\nENTRY main {{\n  // Operations: {:?}\n}}",
-                                module_name,
-                                subgraph.nodes.iter().map(|n| &n.op_type).collect::<Vec<_>>())
-            .into_bytes();
+        let hlo_module = format!(
+            "HloModule {}\n\nENTRY main {{\n  // Operations: {:?}\n}}",
+            module_name,
+            subgraph
+                .nodes
+                .iter()
+                .map(|n| &n.op_type)
+                .collect::<Vec<_>>()
+        )
+        .into_bytes();
 
         // Update compilation stats
         self.compilation_stats.total_compilations += 1;
         self.compilation_stats.total_compilation_time_ms += compilation_time.as_millis() as u64;
 
-        self.compiled_modules.insert(module_name.to_string(), hlo_module.clone());
+        self.compiled_modules
+            .insert(module_name.to_string(), hlo_module.clone());
         Ok(hlo_module)
     }
 
-    fn execute_hlo(&self, hlo_module: &[u8], inputs: &[Tensor], mesh_config: &Option<MeshConfig>) -> Result<Vec<Tensor>> {
+    fn execute_hlo(
+        &self,
+        hlo_module: &[u8],
+        inputs: &[Tensor],
+        mesh_config: &Option<MeshConfig>,
+    ) -> Result<Vec<Tensor>> {
         // Simulate HLO execution
         let execution_delay = if mesh_config.is_some() {
             // Distributed execution is faster due to parallelism
@@ -597,7 +633,11 @@ impl XlaService {
         // For this example, pass through inputs as outputs
         let outputs = inputs.to_vec();
 
-        tracing::debug!("Executed HLO module ({} bytes) with {} inputs", hlo_module.len(), inputs.len());
+        tracing::debug!(
+            "Executed HLO module ({} bytes) with {} inputs",
+            hlo_module.len(),
+            inputs.len()
+        );
         Ok(outputs)
     }
 
@@ -676,7 +716,12 @@ impl DeviceMemory for TpuDeviceMemory {
         buffers.insert(handle, buffer.clone());
         *total += size as u64;
 
-        tracing::debug!("TPU allocated {} bytes on core {}, handle: {}", size, core_id, handle);
+        tracing::debug!(
+            "TPU allocated {} bytes on core {}, handle: {}",
+            size,
+            core_id,
+            handle
+        );
         Ok(buffer)
     }
 
@@ -685,8 +730,12 @@ impl DeviceMemory for TpuDeviceMemory {
         if buffers.remove(&buffer.handle).is_some() {
             let mut total = self.total_allocated.lock().unwrap();
             *total = total.saturating_sub(buffer.size as u64);
-            tracing::debug!("TPU deallocated {} bytes from core {}, handle: {}",
-                       buffer.size, buffer.device_id, buffer.handle);
+            tracing::debug!(
+                "TPU deallocated {} bytes from core {}, handle: {}",
+                buffer.size,
+                buffer.device_id,
+                buffer.handle
+            );
             Ok(())
         } else {
             Err(anyhow!("Invalid TPU buffer handle: {}", buffer.handle))
@@ -703,8 +752,12 @@ impl DeviceMemory for TpuDeviceMemory {
         let copy_time_us = (host_data.len() as f64) / (bandwidth_gbps * 1e9 / 8.0) * 1e6;
         std::thread::sleep(std::time::Duration::from_micros(copy_time_us as u64));
 
-        tracing::debug!("TPU copied {} bytes to core {} in {:.2}us",
-                   host_data.len(), device_buffer.device_id, copy_time_us);
+        tracing::debug!(
+            "TPU copied {} bytes to core {} in {:.2}us",
+            host_data.len(),
+            device_buffer.device_id,
+            copy_time_us
+        );
         Ok(())
     }
 
@@ -718,8 +771,12 @@ impl DeviceMemory for TpuDeviceMemory {
         let copy_time_us = (host_data.len() as f64) / (bandwidth_gbps * 1e9 / 8.0) * 1e6;
         std::thread::sleep(std::time::Duration::from_micros(copy_time_us as u64));
 
-        tracing::debug!("TPU copied {} bytes from core {} in {:.2}us",
-                   host_data.len(), device_buffer.device_id, copy_time_us);
+        tracing::debug!(
+            "TPU copied {} bytes from core {} in {:.2}us",
+            host_data.len(),
+            device_buffer.device_id,
+            copy_time_us
+        );
         Ok(())
     }
 
@@ -788,12 +845,15 @@ impl HardwareProfiler for TpuProfiler {
             operation_name: session.operation_name,
             execution_time_us,
             memory_usage_bytes: 32 * 1024 * 1024, // 32MB typical
-            hardware_utilization: 92.0, // TPUs typically achieve high utilization
+            hardware_utilization: 92.0,           // TPUs typically achieve high utilization
             power_consumption_watts: 200.0,
             energy_consumed_mj: execution_time_us * 200.0 / 1_000_000.0,
             custom_metrics: {
                 let mut metrics = HashMap::new();
-                metrics.insert("tpu_ops_per_second".to_string(), 10_000_000.0 / execution_time_us);
+                metrics.insert(
+                    "tpu_ops_per_second".to_string(),
+                    10_000_000.0 / execution_time_us,
+                );
                 metrics.insert("matrix_unit_utilization".to_string(), 0.95);
                 metrics.insert("hbm_bandwidth_utilization".to_string(), 0.85);
                 metrics.insert("xla_compilation_overhead_us".to_string(), 1000.0);
@@ -819,26 +879,38 @@ impl HardwareProfiler for TpuProfiler {
         }
 
         let total_operations = self.completed_sessions.len() as u64;
-        let total_execution_time_us: f64 = self.completed_sessions.iter()
+        let total_execution_time_us: f64 = self
+            .completed_sessions
+            .iter()
             .map(|r| r.execution_time_us)
             .sum();
         let average_execution_time_us = total_execution_time_us / total_operations as f64;
-        let peak_memory_bytes = self.completed_sessions.iter()
+        let peak_memory_bytes = self
+            .completed_sessions
+            .iter()
             .map(|r| r.memory_usage_bytes)
             .max()
             .unwrap_or(0);
-        let average_utilization: f64 = self.completed_sessions.iter()
+        let average_utilization: f64 = self
+            .completed_sessions
+            .iter()
             .map(|r| r.hardware_utilization)
-            .sum::<f64>() / total_operations as f64;
-        let total_energy_joules: f64 = self.completed_sessions.iter()
+            .sum::<f64>()
+            / total_operations as f64;
+        let total_energy_joules: f64 = self
+            .completed_sessions
+            .iter()
             .map(|r| r.energy_consumed_mj / 1000.0)
             .sum();
 
         // Get top 5 operations by execution time
-        let mut operations_by_time: Vec<(String, f64)> = self.completed_sessions.iter()
+        let mut operations_by_time: Vec<(String, f64)> = self
+            .completed_sessions
+            .iter()
             .map(|r| (r.operation_name.clone(), r.execution_time_us))
             .collect();
-        operations_by_time.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        operations_by_time
+            .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         operations_by_time.truncate(5);
 
         ProfilingSummary {
@@ -882,7 +954,7 @@ pub fn create_tpu_pod_provider(topology: &str, generation: TpuGeneration) -> Res
 
     let pod_config = TpuPodConfig {
         topology: topology.to_string(),
-        chips_per_host: 8, // Typical TPU host configuration
+        chips_per_host: 8,                 // Typical TPU host configuration
         host_count: (total_chips + 7) / 8, // Round up
         enable_mesh_parallelism: true,
         data_parallel_replicas: x,
@@ -957,15 +1029,13 @@ mod tests {
 
         let subgraph = SubGraph {
             name: Some("test_matmul".to_string()),
-            nodes: vec![
-                Node {
-                    name: "matmul1".to_string(),
-                    op_type: "MatMul".to_string(),
-                    inputs: vec!["a".to_string(), "b".to_string()],
-                    outputs: vec!["c".to_string()],
-                    attributes: std::collections::HashMap::new(),
-                },
-            ],
+            nodes: vec![Node {
+                name: "matmul1".to_string(),
+                op_type: "MatMul".to_string(),
+                inputs: vec!["a".to_string(), "b".to_string()],
+                outputs: vec!["c".to_string()],
+                attributes: std::collections::HashMap::new(),
+            }],
             inputs: vec!["a".to_string(), "b".to_string()],
             outputs: vec!["c".to_string()],
         };

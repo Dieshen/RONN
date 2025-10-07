@@ -25,7 +25,7 @@ pub mod executor;
 pub mod router;
 
 pub use complexity::{ComplexityAssessor, ComplexityLevel, ComplexityMetrics};
-pub use executor::{ExecutionPath, LowLevelExecutor, HighLevelPlanner};
+pub use executor::{ExecutionPath, HighLevelPlanner, LowLevelExecutor};
 pub use router::{HRMRouter, RoutingDecision, RoutingStrategy};
 
 use ronn_core::tensor::Tensor;
@@ -241,13 +241,18 @@ mod tests {
         let mut hrm = HierarchicalReasoningModule::new();
 
         // Create a complex input tensor (large size + high variance)
-        let data: Vec<f32> = (0..5000).map(|x| (x as f32).sin() * (x as f32).cos() * (x as f32 % 100.0)).collect();
+        let data: Vec<f32> = (0..5000)
+            .map(|x| (x as f32).sin() * (x as f32).cos() * (x as f32 % 100.0))
+            .collect();
         let tensor = Tensor::from_data(data, vec![1, 5000], DataType::F32, TensorLayout::RowMajor)?;
 
         let result = hrm.process(&tensor)?;
 
         // Large/complex tensors should not route to Hybrid
-        assert!(matches!(result.path_taken, ExecutionPath::System1 | ExecutionPath::System2));
+        assert!(matches!(
+            result.path_taken,
+            ExecutionPath::System1 | ExecutionPath::System2
+        ));
         assert!(hrm.metrics().total_inferences() == 1);
 
         Ok(())
@@ -258,12 +263,17 @@ mod tests {
         let mut hrm = HierarchicalReasoningModule::new();
 
         // Process multiple inputs
-        let simple = Tensor::from_data(vec![1.0f32; 4], vec![1, 4], DataType::F32, TensorLayout::RowMajor)?;
+        let simple = Tensor::from_data(
+            vec![1.0f32; 4],
+            vec![1, 4],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
         let complex = Tensor::from_data(
             (0..1000).map(|x| x as f32).collect(),
             vec![1, 1000],
             DataType::F32,
-            TensorLayout::RowMajor
+            TensorLayout::RowMajor,
         )?;
 
         hrm.process(&simple)?;

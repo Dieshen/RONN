@@ -57,7 +57,12 @@ impl BitNetMemoryAllocator {
                 };
                 element_count * element_size
             }
-            _ => return Err(anyhow!("Unsupported data type for BitNet allocator: {:?}", dtype)),
+            _ => {
+                return Err(anyhow!(
+                    "Unsupported data type for BitNet allocator: {:?}",
+                    dtype
+                ))
+            }
         }
     }
 
@@ -66,7 +71,7 @@ impl BitNetMemoryAllocator {
         match dtype {
             DataType::Bool | DataType::U8 => 32, // 32-byte alignment for SIMD
             DataType::F32 => 32,                 // 32-byte alignment for AVX2
-            DataType::F16 | DataType::BF16 => 16,                 // 16-byte alignment for SSE
+            DataType::F16 | DataType::BF16 => 16, // 16-byte alignment for SSE
             _ => 8,                              // Default alignment
         }
     }

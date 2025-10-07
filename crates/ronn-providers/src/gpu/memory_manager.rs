@@ -221,16 +221,19 @@ impl MultiGpuMemoryManager {
         }
 
         // Initialize P2P connectivity matrix
-        let p2p_matrix = Arc::new(RwLock::new(
-            P2PConnectivityMatrix::discover_connectivity(&device_ids)?
-        ));
+        let p2p_matrix = Arc::new(RwLock::new(P2PConnectivityMatrix::discover_connectivity(
+            &device_ids,
+        )?));
 
         // Initialize synchronization manager
         let sync_manager = Arc::new(SyncManager::new(config.sync_strategy));
 
         let global_stats = Arc::new(Mutex::new(GlobalMemoryStats::default()));
 
-        info!("Created multi-GPU memory manager for {} devices", device_ids.len());
+        info!(
+            "Created multi-GPU memory manager for {} devices",
+            device_ids.len()
+        );
 
         Ok(Self {
             device_pools,
@@ -249,7 +252,9 @@ impl MultiGpuMemoryManager {
         alignment: usize,
         data_type: DataType,
     ) -> Result<MemoryBlock> {
-        let pool = self.device_pools.get(&device_id)
+        let pool = self
+            .device_pools
+            .get(&device_id)
             .ok_or_else(|| anyhow!("Device {} not found", device_id))?;
 
         let mut pool = pool.lock().unwrap();
@@ -259,7 +264,10 @@ impl MultiGpuMemoryManager {
         self.update_global_stats();
 
         // Create synchronization event
-        if matches!(self.config.sync_strategy, SyncStrategy::Automatic | SyncStrategy::StreamBased) {
+        if matches!(
+            self.config.sync_strategy,
+            SyncStrategy::Automatic | SyncStrategy::StreamBased
+        ) {
             let event = SyncEvent {
                 event_id: self.generate_event_id(),
                 device_id,
@@ -276,7 +284,9 @@ impl MultiGpuMemoryManager {
 
     /// Deallocate memory block.
     pub fn deallocate(&self, block: MemoryBlock) -> Result<()> {
-        let pool = self.device_pools.get(&block.device_id)
+        let pool = self
+            .device_pools
+            .get(&block.device_id)
             .ok_or_else(|| anyhow!("Device {} not found", block.device_id))?;
 
         let mut pool = pool.lock().unwrap();
@@ -316,14 +326,14 @@ impl MultiGpuMemoryManager {
                 for &device_id in self.device_pools.keys() {
                     self.synchronize_device(device_id)?;
                 }
-            },
+            }
             SyncStrategy::Automatic => {
                 // Already synchronized automatically
-            },
+            }
             SyncStrategy::StreamBased => {
                 // Synchronize using events
                 self.sync_manager.synchronize_streams()?;
-            },
+            }
         }
 
         info!("All devices synchronized");
@@ -345,7 +355,7 @@ impl MultiGpuMemoryManager {
     /// Get global memory statistics.
     pub fn get_global_stats(&self) -> GlobalMemoryStats {
         let stats = self.global_stats.lock().unwrap();
-(*stats).clone()
+        (*stats).clone()
     }
 
     /// Get P2P connectivity information.
@@ -375,7 +385,10 @@ impl MultiGpuMemoryManager {
         dst_device_id: usize,
         size: usize,
     ) -> Result<MemoryBlock> {
-        debug!("P2P transfer from device {} to device {}", src_block.device_id, dst_device_id);
+        debug!(
+            "P2P transfer from device {} to device {}",
+            src_block.device_id, dst_device_id
+        );
 
         // Record transfer start event
         let start_event = SyncEvent {
@@ -421,7 +434,10 @@ impl MultiGpuMemoryManager {
         dst_device_id: usize,
         size: usize,
     ) -> Result<MemoryBlock> {
-        debug!("Host transfer from device {} to device {}", src_block.device_id, dst_device_id);
+        debug!(
+            "Host transfer from device {} to device {}",
+            src_block.device_id, dst_device_id
+        );
 
         // Simulate slower host-based transfer
         let transfer_time = std::time::Duration::from_micros(size as u64 / 1000); // ~1GB/s
@@ -446,7 +462,12 @@ impl MultiGpuMemoryManager {
         Ok(())
     }
 
-    fn simulate_p2p_transfer(&self, src_device: usize, dst_device: usize, size: usize) -> Result<std::time::Duration> {
+    fn simulate_p2p_transfer(
+        &self,
+        src_device: usize,
+        dst_device: usize,
+        size: usize,
+    ) -> Result<std::time::Duration> {
         let p2p_matrix = self.p2p_matrix.read().unwrap();
         let capability = p2p_matrix.get_capability(src_device, dst_device);
 
@@ -535,10 +556,19 @@ impl DeviceMemoryPool {
         }
     }
 
-    fn allocate(&mut self, size: usize, alignment: usize, data_type: DataType) -> Result<MemoryBlock> {
+    fn allocate(
+        &mut self,
+        size: usize,
+        alignment: usize,
+        data_type: DataType,
+    ) -> Result<MemoryBlock> {
         if size > self.stats.available_bytes {
-            return Err(anyhow!("Insufficient memory on device {}: requested {}, available {}",
-                self.device_id, size, self.stats.available_bytes));
+            return Err(anyhow!(
+                "Insufficient memory on device {}: requested {}, available {}",
+                self.device_id,
+                size,
+                self.stats.available_bytes
+            ));
         }
 
         let alloc_id = self.next_alloc_id;
@@ -550,7 +580,7 @@ impl DeviceMemoryPool {
             size,
             alignment,
             virtual_address: alloc_id * 0x1000, // Simulated address
-            p2p_accessible: true, // Assume P2P capable
+            p2p_accessible: true,               // Assume P2P capable
             data_type,
             ref_count: 1,
         };
@@ -610,7 +640,9 @@ impl P2PConnectivityMatrix {
     }
 
     fn get_capability(&self, src: usize, dst: usize) -> P2PCapability {
-        self.connectivity.get(&(src, dst)).copied()
+        self.connectivity
+            .get(&(src, dst))
+            .copied()
             .unwrap_or(P2PCapability {
                 supported: false,
                 bandwidth_gbps: 0.0,

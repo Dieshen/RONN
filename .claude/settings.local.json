@@ -6,7 +6,11 @@
       "Bash(cargo test:*)",
       "Bash(tee:*)",
       "Bash(cargo bench:*)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo llvm-cov:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -18,7 +18,9 @@ impl OptimizationPass for ConstantFoldingPass {
 
         // Find nodes whose all inputs are constants
         for node in graph.nodes() {
-            if Self::all_inputs_constant(&node.id.to_string(), graph) && Self::is_foldable_op(&node.op_type) {
+            if Self::all_inputs_constant(&node.id.to_string(), graph)
+                && Self::is_foldable_op(&node.op_type)
+            {
                 debug!("Folding constant node: {} ({})", node.id, node.op_type);
 
                 // Execute the operation at compile time

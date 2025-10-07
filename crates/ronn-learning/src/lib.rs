@@ -23,13 +23,13 @@
 //! Experience Replay (Rehearsal)
 //! ```
 
-pub mod timescales;
 pub mod ewc;
 pub mod replay;
+pub mod timescales;
 
-pub use timescales::{MultiTimescaleLearner, TimescaleConfig, WeightUpdate};
 pub use ewc::{ElasticWeightConsolidation, ImportanceWeights};
-pub use replay::{ExperienceReplay, Experience, ReplayStrategy};
+pub use replay::{Experience, ExperienceReplay, ReplayStrategy};
+pub use timescales::{MultiTimescaleLearner, TimescaleConfig, WeightUpdate};
 
 use ronn_core::tensor::Tensor;
 use thiserror::Error;
@@ -74,7 +74,12 @@ impl ContinualLearningEngine {
     }
 
     /// Learn from a new experience
-    pub fn learn(&mut self, input: Tensor, target: Tensor, importance: f64) -> Result<LearningResult> {
+    pub fn learn(
+        &mut self,
+        input: Tensor,
+        target: Tensor,
+        importance: f64,
+    ) -> Result<LearningResult> {
         self.stats.total_updates += 1;
 
         // 1. Store experience for replay
@@ -126,7 +131,9 @@ impl ContinualLearningEngine {
 
         for exp in experiences {
             // Re-learn from experience (with reduced learning rate)
-            let update = self.timescale_learner.compute_update(&exp.input, &exp.target)?;
+            let update = self
+                .timescale_learner
+                .compute_update(&exp.input, &exp.target)?;
             let scaled_update = update.scale(0.5); // Reduce impact of replay
             self.timescale_learner.apply_update(&scaled_update)?;
         }
@@ -212,8 +219,18 @@ mod tests {
     fn test_learning_update() -> Result<()> {
         let mut engine = ContinualLearningEngine::new(LearningConfig::default());
 
-        let input = Tensor::from_data(vec![1.0f32, 2.0, 3.0], vec![1, 3], DataType::F32, TensorLayout::RowMajor)?;
-        let target = Tensor::from_data(vec![0.5f32, 0.5], vec![1, 2], DataType::F32, TensorLayout::RowMajor)?;
+        let input = Tensor::from_data(
+            vec![1.0f32, 2.0, 3.0],
+            vec![1, 3],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
+        let target = Tensor::from_data(
+            vec![0.5f32, 0.5],
+            vec![1, 2],
+            DataType::F32,
+            TensorLayout::RowMajor,
+        )?;
 
         let result = engine.learn(input, target, 0.8)?;
 
@@ -228,12 +245,20 @@ mod tests {
         let mut engine = ContinualLearningEngine::new(LearningConfig::default());
 
         // Simulate learning a task
-        let task_data = vec![
-            (
-                Tensor::from_data(vec![1.0f32, 2.0], vec![1, 2], DataType::F32, TensorLayout::RowMajor)?,
-                Tensor::from_data(vec![0.5f32], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?,
-            ),
-        ];
+        let task_data = vec![(
+            Tensor::from_data(
+                vec![1.0f32, 2.0],
+                vec![1, 2],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?,
+            Tensor::from_data(
+                vec![0.5f32],
+                vec![1, 1],
+                DataType::F32,
+                TensorLayout::RowMajor,
+            )?,
+        )];
 
         engine.consolidate_task(&task_data)?;
 

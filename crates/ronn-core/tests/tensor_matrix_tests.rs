@@ -63,13 +63,15 @@ fn test_matrix_multiplication_incompatible_dims() {
         vec![2, 1],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
     let b = Tensor::from_data(
         vec![1.0, 2.0, 3.0],
         vec![3, 1],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // 2x1 @ 3x1 should fail (inner dimensions don't match)
     assert!(a.matmul(&b).is_err());
@@ -112,7 +114,8 @@ fn test_transpose_invalid_dims() {
         vec![2, 2],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // Out of bounds dimensions
     assert!(a.transpose_dims(5, 6).is_err());
@@ -123,11 +126,7 @@ fn test_identity_matrix() -> Result<()> {
     let identity = Tensor::eye(3, DataType::F32, TensorLayout::RowMajor)?;
 
     assert_eq!(identity.shape(), vec![3, 3]);
-    assert_tensor_eq(&identity, &[
-        1.0, 0.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 0.0, 1.0,
-    ])?;
+    assert_tensor_eq(&identity, &[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])?;
     Ok(())
 }
 
@@ -206,12 +205,7 @@ fn test_trace_3x3() -> Result<()> {
 
 #[test]
 fn test_determinant_1x1() -> Result<()> {
-    let a = Tensor::from_data(
-        vec![5.0],
-        vec![1, 1],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    )?;
+    let a = Tensor::from_data(vec![5.0], vec![1, 1], DataType::F32, TensorLayout::RowMajor)?;
 
     let det = a.det()?;
     assert_tensor_eq(&det, &[5.0])?;
@@ -263,7 +257,8 @@ fn test_inverse_singular_matrix() {
         vec![2, 2],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // Singular matrix (det = 0) should fail
     assert!(a.inverse().is_err());
@@ -276,7 +271,8 @@ fn test_inverse_non_square() {
         vec![2, 3],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     assert!(a.inverse().is_err());
 }
@@ -321,11 +317,7 @@ fn test_diag_embed() -> Result<()> {
 
     let diag_matrix = a.diag_embed()?;
     assert_eq!(diag_matrix.shape(), vec![3, 3]);
-    assert_tensor_eq(&diag_matrix, &[
-        1.0, 0.0, 0.0,
-        0.0, 2.0, 0.0,
-        0.0, 0.0, 3.0,
-    ])?;
+    assert_tensor_eq(&diag_matrix, &[1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 3.0])?;
     Ok(())
 }
 
@@ -334,7 +326,7 @@ fn test_batch_matmul_3d() -> Result<()> {
     // Batch of 2 matrices, each 2x3
     let a = Tensor::from_data(
         vec![
-            1.0, 2.0, 3.0, 4.0, 5.0, 6.0,  // First matrix
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, // First matrix
             7.0, 8.0, 9.0, 10.0, 11.0, 12.0, // Second matrix
         ],
         vec![2, 2, 3],
@@ -345,8 +337,8 @@ fn test_batch_matmul_3d() -> Result<()> {
     // Batch of 2 matrices, each 3x2
     let b = Tensor::from_data(
         vec![
-            1.0, 0.0, 0.0, 1.0, 0.0, 0.0,  // First matrix (identity-like)
-            0.0, 1.0, 1.0, 0.0, 0.0, 0.0,  // Second matrix
+            1.0, 0.0, 0.0, 1.0, 0.0, 0.0, // First matrix (identity-like)
+            0.0, 1.0, 1.0, 0.0, 0.0, 0.0, // Second matrix
         ],
         vec![2, 3, 2],
         DataType::F32,

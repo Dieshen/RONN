@@ -19,7 +19,10 @@ impl OptimizationPass for NodeFusionPass {
         stats.nodes_fused += self.fuse_conv_bn_relu(graph)?;
         stats.nodes_fused += self.fuse_matmul_add(graph)?;
 
-        debug!("Node fusion pass completed: {} nodes fused", stats.nodes_fused);
+        debug!(
+            "Node fusion pass completed: {} nodes fused",
+            stats.nodes_fused
+        );
 
         Ok(stats)
     }
@@ -34,7 +37,9 @@ impl NodeFusionPass {
         for node in graph.nodes() {
             if node.op_type == "Conv" {
                 // Check if followed by BatchNorm
-                if let Some(bn_node) = Self::find_successor(graph, &node.id.to_string(), "BatchNormalization") {
+                if let Some(bn_node) =
+                    Self::find_successor(graph, &node.id.to_string(), "BatchNormalization")
+                {
                     // Check if BatchNorm is followed by ReLU
                     if let Some(_relu_node) = Self::find_successor(graph, &bn_node, "Relu") {
                         debug!("Found Conv+BN+ReLU pattern at node: {}", node.id);

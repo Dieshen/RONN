@@ -1,3 +1,4 @@
+use crate::common::*;
 /// Integration tests for DistilBERT NLP model.
 ///
 /// Tests:
@@ -7,9 +8,7 @@
 /// - Accuracy validation against HuggingFace transformers
 /// - Performance benchmarks
 /// - Different sequence lengths
-
 use std::time::Instant;
-use crate::common::*;
 
 const MODEL_NAME: &str = "distilbert.onnx";
 
@@ -52,7 +51,10 @@ fn test_distilbert_load() {
 
     // Validate inputs
     for input in model.inputs() {
-        println!("  Input: {} {:?} {:?}", input.name, input.shape, input.data_type);
+        println!(
+            "  Input: {} {:?} {:?}",
+            input.name, input.shape, input.data_type
+        );
 
         // Inputs should be 2D: [batch, sequence_length]
         // Note: dimensions may be dynamic (0 or -1)
@@ -65,7 +67,10 @@ fn test_distilbert_load() {
 
     // Validate output
     let output = &model.outputs()[0];
-    println!("  Output: {} {:?} {:?}", output.name, output.shape, output.data_type);
+    println!(
+        "  Output: {} {:?} {:?}",
+        output.name, output.shape, output.data_type
+    );
 
     // Output should be 3D: [batch, sequence_length, hidden_size]
     // DistilBERT-base has hidden_size = 768
@@ -86,8 +91,8 @@ fn test_distilbert_inference_sample() {
     }
 
     let model_path = model_path(MODEL_NAME);
-    let model = ronn_onnx::ModelLoader::load_from_file(&model_path)
-        .expect("Failed to load DistilBERT");
+    let model =
+        ronn_onnx::ModelLoader::load_from_file(&model_path).expect("Failed to load DistilBERT");
 
     println!("\nRunning inference on sample token sequence...");
 

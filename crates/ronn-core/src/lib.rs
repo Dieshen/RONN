@@ -47,7 +47,8 @@ pub use session::{
 pub use tensor::Tensor;
 pub use types::{
     AttributeValue, CompiledKernel, DataType, ExecutionProvider, GraphEdge, GraphNode, KernelStats,
-    MemoryInfo, MemoryType, MemoryUsage, ModelGraph, NodeAttribute, NodeId, OperatorSpec, OptimizationLevel,
-    PerformanceProfile, ProviderCapability, ProviderConfig, ProviderId, ProviderType, ResourceRequirements,
-    SessionId, SubGraph, TensorAllocator, TensorBuffer, TensorLayout,
+    MemoryInfo, MemoryType, MemoryUsage, ModelGraph, NodeAttribute, NodeId, OperatorSpec,
+    OptimizationLevel, PerformanceProfile, ProviderCapability, ProviderConfig, ProviderId,
+    ProviderType, ResourceRequirements, SessionId, SubGraph, TensorAllocator, TensorBuffer,
+    TensorLayout,
 };

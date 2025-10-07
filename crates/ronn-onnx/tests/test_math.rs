@@ -4,7 +4,7 @@
 use ronn_core::tensor::Tensor;
 use ronn_core::types::{DataType, TensorLayout};
 use ronn_core::NodeAttribute;
-use ronn_onnx::{AddOp, SubOp, MulOp, DivOp, MatMulOp, OnnxOperator};
+use ronn_onnx::{AddOp, DivOp, MatMulOp, MulOp, OnnxOperator, SubOp};
 use std::collections::HashMap;
 
 const EPSILON: f32 = 1e-5;
@@ -17,7 +17,9 @@ fn approx_eq_vec(a: &[f32], b: &[f32], epsilon: f32) -> bool {
     if a.len() != b.len() {
         return false;
     }
-    a.iter().zip(b.iter()).all(|(x, y)| approx_eq(*x, *y, epsilon))
+    a.iter()
+        .zip(b.iter())
+        .all(|(x, y)| approx_eq(*x, *y, epsilon))
 }
 
 // ============ Add Tests ============
@@ -29,19 +31,11 @@ fn test_add_same_shape() {
     let data1 = vec![1.0, 2.0, 3.0, 4.0];
     let data2 = vec![5.0, 6.0, 7.0, 8.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 =
+        Tensor::from_data(data2, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -60,19 +54,10 @@ fn test_add_broadcast_scalar() {
     let data1 = vec![1.0, 2.0, 3.0, 4.0];
     let data2 = vec![10.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![1],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 = Tensor::from_data(data2, vec![1], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -91,19 +76,10 @@ fn test_add_broadcast_vector() {
     let data1 = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
     let data2 = vec![10.0, 20.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![3, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![3, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 = Tensor::from_data(data2, vec![2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -137,19 +113,11 @@ fn test_sub_same_shape() {
     let data1 = vec![10.0, 20.0, 30.0, 40.0];
     let data2 = vec![1.0, 2.0, 3.0, 4.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 =
+        Tensor::from_data(data2, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -168,19 +136,10 @@ fn test_sub_broadcast() {
     let data1 = vec![10.0, 20.0, 30.0, 40.0];
     let data2 = vec![5.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![1],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 = Tensor::from_data(data2, vec![1], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -199,19 +158,9 @@ fn test_sub_negative_results() {
     let data1 = vec![1.0, 2.0];
     let data2 = vec![5.0, 3.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 = Tensor::from_data(data1, vec![2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 = Tensor::from_data(data2, vec![2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -232,19 +181,11 @@ fn test_mul_same_shape() {
     let data1 = vec![2.0, 3.0, 4.0, 5.0];
     let data2 = vec![1.0, 2.0, 3.0, 4.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 =
+        Tensor::from_data(data2, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -263,19 +204,10 @@ fn test_mul_broadcast_scalar() {
     let data1 = vec![1.0, 2.0, 3.0, 4.0];
     let data2 = vec![2.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![1],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 = Tensor::from_data(data2, vec![1], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -294,19 +226,9 @@ fn test_mul_with_zero() {
     let data1 = vec![1.0, 2.0, 3.0];
     let data2 = vec![0.0, 1.0, 0.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 = Tensor::from_data(data1, vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 = Tensor::from_data(data2, vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -327,19 +249,11 @@ fn test_div_same_shape() {
     let data1 = vec![10.0, 20.0, 30.0, 40.0];
     let data2 = vec![2.0, 4.0, 5.0, 8.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 =
+        Tensor::from_data(data2, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -358,19 +272,10 @@ fn test_div_broadcast_scalar() {
     let data1 = vec![10.0, 20.0, 30.0, 40.0];
     let data2 = vec![2.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![1],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 = Tensor::from_data(data2, vec![1], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -389,19 +294,9 @@ fn test_div_fractional_results() {
     let data1 = vec![1.0, 2.0, 3.0];
     let data2 = vec![2.0, 3.0, 4.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 = Tensor::from_data(data1, vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 = Tensor::from_data(data2, vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -424,19 +319,11 @@ fn test_matmul_2d_basic() {
     // 3x2 matrix
     let data2 = vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![3, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 =
+        Tensor::from_data(data2, vec![3, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -463,19 +350,11 @@ fn test_matmul_square_matrices() {
     let data1 = vec![1.0, 2.0, 3.0, 4.0];
     let data2 = vec![5.0, 6.0, 7.0, 8.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 =
+        Tensor::from_data(data2, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -498,19 +377,11 @@ fn test_matmul_vector_matrix() {
     // 3x2 matrix
     let data2 = vec![4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![1, 3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![1, 3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![3, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 =
+        Tensor::from_data(data2, vec![3, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -536,19 +407,16 @@ fn test_matmul_identity() {
     let data1 = vec![1.0, 0.0, 0.0, 1.0];
     let data2 = vec![5.0, 6.0, 7.0, 8.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![2, 2],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 =
+        Tensor::from_data(data1, vec![2, 2], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let input2 = Tensor::from_data(
         data2.clone(),
         vec![2, 2],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     let inputs = vec![&input1, &input2];
     let attributes = HashMap::new();
@@ -578,31 +446,37 @@ fn test_elementwise_commutativity() {
     let data1 = vec![1.0, 2.0, 3.0];
     let data2 = vec![4.0, 5.0, 6.0];
 
-    let input1 = Tensor::from_data(
-        data1,
-        vec![3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input1 = Tensor::from_data(data1, vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
-    let input2 = Tensor::from_data(
-        data2,
-        vec![3],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    ).unwrap();
+    let input2 = Tensor::from_data(data2, vec![3], DataType::F32, TensorLayout::RowMajor).unwrap();
 
     let attributes = HashMap::new();
 
     // Test Add commutativity
     let add_op = AddOp;
-    let result1 = add_op.execute(&vec![&input1, &input2], &attributes).unwrap();
-    let result2 = add_op.execute(&vec![&input2, &input1], &attributes).unwrap();
-    assert!(approx_eq_vec(&result1[0].to_vec().unwrap(), &result2[0].to_vec().unwrap(), EPSILON));
+    let result1 = add_op
+        .execute(&vec![&input1, &input2], &attributes)
+        .unwrap();
+    let result2 = add_op
+        .execute(&vec![&input2, &input1], &attributes)
+        .unwrap();
+    assert!(approx_eq_vec(
+        &result1[0].to_vec().unwrap(),
+        &result2[0].to_vec().unwrap(),
+        EPSILON
+    ));
 
     // Test Mul commutativity
     let mul_op = MulOp;
-    let result1 = mul_op.execute(&vec![&input1, &input2], &attributes).unwrap();
-    let result2 = mul_op.execute(&vec![&input2, &input1], &attributes).unwrap();
-    assert!(approx_eq_vec(&result1[0].to_vec().unwrap(), &result2[0].to_vec().unwrap(), EPSILON));
+    let result1 = mul_op
+        .execute(&vec![&input1, &input2], &attributes)
+        .unwrap();
+    let result2 = mul_op
+        .execute(&vec![&input2, &input1], &attributes)
+        .unwrap();
+    assert!(approx_eq_vec(
+        &result1[0].to_vec().unwrap(),
+        &result2[0].to_vec().unwrap(),
+        EPSILON
+    ));
 }

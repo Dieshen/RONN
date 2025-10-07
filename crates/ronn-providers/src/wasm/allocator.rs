@@ -75,7 +75,7 @@ impl WasmMemoryAllocator {
     fn get_wasm_alignment(&self, dtype: DataType) -> usize {
         match dtype {
             DataType::F32 | DataType::I32 | DataType::U32 => 16, // 128-bit SIMD alignment
-            DataType::F16 | DataType::BF16 => 8,                                   // Half precision
+            DataType::F16 | DataType::BF16 => 8,                 // Half precision
             DataType::F64 | DataType::I64 => 16,                 // 64-bit types
             DataType::U8 | DataType::I8 | DataType::Bool => 16,  // Byte types with SIMD
         }
@@ -89,7 +89,9 @@ impl WasmMemoryAllocator {
         if total_after_allocation > self.max_memory_bytes {
             return Err(anyhow!(
                 "Allocation would exceed WASM memory limit: {} + {} > {}",
-                current_allocated, size, self.max_memory_bytes
+                current_allocated,
+                size,
+                self.max_memory_bytes
             ));
         }
 

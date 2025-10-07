@@ -78,7 +78,10 @@ impl ModelLoader {
         for input in &graph_proto.input {
             let name = input.name.clone();
             let (shape, data_type) = Self::shape_and_type_from_value_info(input)?;
-            debug!("Input: {} with shape {:?}, type {:?}", name, shape, data_type);
+            debug!(
+                "Input: {} with shape {:?}, type {:?}",
+                name, shape, data_type
+            );
 
             // Skip if it's an initializer (weights)
             if !initializers.contains_key(&name) {
@@ -95,7 +98,10 @@ impl ModelLoader {
         for output in &graph_proto.output {
             let name = output.name.clone();
             let (shape, data_type) = Self::shape_and_type_from_value_info(output)?;
-            debug!("Output: {} with shape {:?}, type {:?}", name, shape, data_type);
+            debug!(
+                "Output: {} with shape {:?}, type {:?}",
+                name, shape, data_type
+            );
             outputs.push(TensorInfo {
                 name: name.clone(),
                 shape,
@@ -151,8 +157,7 @@ impl ModelLoader {
     fn convert_attribute(attr: &generated::AttributeProto) -> Result<NodeAttribute> {
         use generated::attribute_proto::AttributeType;
 
-        let attr_type = AttributeType::try_from(attr.r#type)
-            .unwrap_or(AttributeType::Undefined);
+        let attr_type = AttributeType::try_from(attr.r#type).unwrap_or(AttributeType::Undefined);
 
         match attr_type {
             AttributeType::Float => Ok(NodeAttribute::Float(attr.f as f64)),
@@ -264,11 +269,8 @@ impl ModelLoader {
 
         // For now, create a zero tensor and note that we need to copy data
         // Full implementation would parse raw_data based on data_type
-        let tensor = ronn_core::tensor::Tensor::zeros(
-            shape.to_vec(),
-            data_type,
-            TensorLayout::RowMajor,
-        )?;
+        let tensor =
+            ronn_core::tensor::Tensor::zeros(shape.to_vec(), data_type, TensorLayout::RowMajor)?;
 
         // TODO: Parse raw_data bytes according to data_type endianness
         debug!(
@@ -310,11 +312,8 @@ impl ModelLoader {
             DataType::I32 => {
                 if !tensor_proto.int32_data.is_empty() {
                     // Convert i32 to f32 for from_data
-                    let f32_data: Vec<f32> = tensor_proto
-                        .int32_data
-                        .iter()
-                        .map(|&x| x as f32)
-                        .collect();
+                    let f32_data: Vec<f32> =
+                        tensor_proto.int32_data.iter().map(|&x| x as f32).collect();
                     ronn_core::tensor::Tensor::from_data(
                         f32_data,
                         shape.to_vec(),
@@ -332,11 +331,8 @@ impl ModelLoader {
             DataType::I64 => {
                 if !tensor_proto.int64_data.is_empty() {
                     // Convert i64 to f32 for from_data
-                    let f32_data: Vec<f32> = tensor_proto
-                        .int64_data
-                        .iter()
-                        .map(|&x| x as f32)
-                        .collect();
+                    let f32_data: Vec<f32> =
+                        tensor_proto.int64_data.iter().map(|&x| x as f32).collect();
                     ronn_core::tensor::Tensor::from_data(
                         f32_data,
                         shape.to_vec(),
@@ -353,11 +349,7 @@ impl ModelLoader {
             }
             _ => {
                 // For other types, create zero tensor for now
-                ronn_core::tensor::Tensor::zeros(
-                    shape.to_vec(),
-                    data_type,
-                    TensorLayout::RowMajor,
-                )?
+                ronn_core::tensor::Tensor::zeros(shape.to_vec(), data_type, TensorLayout::RowMajor)?
             }
         };
 

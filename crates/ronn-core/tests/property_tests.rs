@@ -4,8 +4,8 @@
 //! that should hold for all tensor operations.
 
 use proptest::prelude::*;
-use proptest::test_runner::TestRunner;
 use proptest::strategy::ValueTree;
+use proptest::test_runner::TestRunner;
 use ronn_core::{ArithmeticOps, DataType, MatrixOps, ReductionOps, ShapeOps, Tensor, TensorLayout};
 
 // Strategy for generating valid tensor shapes

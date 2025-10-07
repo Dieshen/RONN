@@ -473,15 +473,16 @@ impl GpuTopologyManager {
         // Register default placement strategies
         placement_strategies.insert(
             "locality_aware".to_string(),
-            Box::new(LocalityAwarePlacement::new()) as Box<dyn PlacementStrategy + Send + Sync>
+            Box::new(LocalityAwarePlacement::new()) as Box<dyn PlacementStrategy + Send + Sync>,
         );
         placement_strategies.insert(
             "bandwidth_optimized".to_string(),
-            Box::new(BandwidthOptimizedPlacement::new()) as Box<dyn PlacementStrategy + Send + Sync>
+            Box::new(BandwidthOptimizedPlacement::new())
+                as Box<dyn PlacementStrategy + Send + Sync>,
         );
         placement_strategies.insert(
             "power_efficient".to_string(),
-            Box::new(PowerEfficientPlacement::new()) as Box<dyn PlacementStrategy + Send + Sync>
+            Box::new(PowerEfficientPlacement::new()) as Box<dyn PlacementStrategy + Send + Sync>,
         );
 
         Ok(Self {
@@ -515,8 +516,11 @@ impl GpuTopologyManager {
         topology.system_info.gpu_count = topology.devices.len();
         topology.discovery_timestamp = std::time::SystemTime::now();
 
-        info!("Topology discovery completed: {} GPUs, {} links",
-              topology.devices.len(), topology.links.len());
+        info!(
+            "Topology discovery completed: {} GPUs, {} links",
+            topology.devices.len(),
+            topology.links.len()
+        );
 
         // Benchmark links if enabled
         if self.config.benchmark_links {
@@ -540,16 +544,23 @@ impl GpuTopologyManager {
     ) -> Result<PlacementPlan> {
         let topology = self.topology.read().unwrap();
 
-        let strategy = self.placement_strategies.get(strategy_name)
+        let strategy = self
+            .placement_strategies
+            .get(strategy_name)
             .ok_or_else(|| anyhow!("Unknown placement strategy: {}", strategy_name))?;
 
-        debug!("Optimizing placement for workload '{}' using strategy '{}'",
-               workload.id, strategy_name);
+        debug!(
+            "Optimizing placement for workload '{}' using strategy '{}'",
+            workload.id, strategy_name
+        );
 
         let plan = strategy.optimize_placement(workload, &topology)?;
 
-        info!("Generated placement plan for workload '{}': {} device assignments",
-              workload.id, plan.device_assignments.len());
+        info!(
+            "Generated placement plan for workload '{}': {} device assignments",
+            workload.id,
+            plan.device_assignments.len()
+        );
 
         Ok(plan)
     }
@@ -595,11 +606,20 @@ impl GpuTopologyManager {
         let mut devices = HashMap::new();
 
         // Simulate discovery of GPU devices
-        for device_id in 0..4 { // Simulate 4 GPUs
+        for device_id in 0..4 {
+            // Simulate 4 GPUs
             let device_info = GpuDeviceInfo {
                 device_id,
-                architecture: if device_id < 2 { "Ampere".to_string() } else { "Ada Lovelace".to_string() },
-                compute_capability: if device_id < 2 { "8.0".to_string() } else { "8.9".to_string() },
+                architecture: if device_id < 2 {
+                    "Ampere".to_string()
+                } else {
+                    "Ada Lovelace".to_string()
+                },
+                compute_capability: if device_id < 2 {
+                    "8.0".to_string()
+                } else {
+                    "8.9".to_string()
+                },
                 total_memory: 40 * 1024 * 1024 * 1024, // 40GB
                 memory_bandwidth: if device_id < 2 { 1555.0 } else { 1008.0 },
                 sm_count: if device_id < 2 { 108 } else { 128 },
@@ -640,7 +660,8 @@ impl GpuTopologyManager {
         for (&src_id, _) in devices {
             for (&dst_id, _) in devices {
                 if src_id != dst_id {
-                    let (link_type, bandwidth, latency) = self.determine_link_characteristics(src_id, dst_id);
+                    let (link_type, bandwidth, latency) =
+                        self.determine_link_characteristics(src_id, dst_id);
 
                     let link = InterconnectLink {
                         src_device: src_id,
@@ -648,7 +669,11 @@ impl GpuTopologyManager {
                         link_type,
                         bandwidth_gbps: bandwidth,
                         latency_us: latency,
-                        link_count: if link_type == InterconnectType::NVLink { 4 } else { 1 },
+                        link_count: if link_type == InterconnectType::NVLink {
+                            4
+                        } else {
+                            1
+                        },
                         utilization: 0.0,
                         quality_score: self.calculate_link_quality(link_type, bandwidth, latency),
                     };
@@ -661,19 +686,28 @@ impl GpuTopologyManager {
         Ok(links)
     }
 
-    fn determine_link_characteristics(&self, src: usize, dst: usize) -> (InterconnectType, f64, f64) {
+    fn determine_link_characteristics(
+        &self,
+        src: usize,
+        dst: usize,
+    ) -> (InterconnectType, f64, f64) {
         // Simulate different link types based on device proximity
         let distance = src.abs_diff(dst);
 
         match distance {
-            1 => (InterconnectType::NVLink, 600.0, 1.0),      // Adjacent devices with NVLink
-            2 => (InterconnectType::NVSwitch, 600.0, 2.0),    // Through NVSwitch
-            3 => (InterconnectType::PCIe, 64.0, 5.0),         // PCIe Gen4 x16
+            1 => (InterconnectType::NVLink, 600.0, 1.0), // Adjacent devices with NVLink
+            2 => (InterconnectType::NVSwitch, 600.0, 2.0), // Through NVSwitch
+            3 => (InterconnectType::PCIe, 64.0, 5.0),    // PCIe Gen4 x16
             _ => (InterconnectType::SystemMemory, 12.8, 10.0), // Through system memory
         }
     }
 
-    fn calculate_link_quality(&self, link_type: InterconnectType, bandwidth: f64, latency: f64) -> f32 {
+    fn calculate_link_quality(
+        &self,
+        link_type: InterconnectType,
+        bandwidth: f64,
+        latency: f64,
+    ) -> f32 {
         let base_score = match link_type {
             InterconnectType::NVLink => 1.0,
             InterconnectType::NVSwitch => 0.95,
@@ -724,13 +758,17 @@ impl GpuTopologyManager {
         let topology = self.topology.read().unwrap();
 
         for (&(src, dst), _link) in &topology.links {
-            if src < dst { // Only benchmark each pair once
+            if src < dst {
+                // Only benchmark each pair once
                 match self.benchmark_link(src, dst, &topology) {
                     Ok((bandwidth, latency)) => {
-                        self.profiler.update_link_performance(src, dst, bandwidth, latency);
-                        debug!("Benchmarked link {}->{}: {:.1} GB/s, {:.1} μs",
-                               src, dst, bandwidth, latency);
-                    },
+                        self.profiler
+                            .update_link_performance(src, dst, bandwidth, latency);
+                        debug!(
+                            "Benchmarked link {}->{}: {:.1} GB/s, {:.1} μs",
+                            src, dst, bandwidth, latency
+                        );
+                    }
                     Err(e) => warn!("Failed to benchmark link {}->{}: {}", src, dst, e),
                 }
             }
@@ -806,7 +844,10 @@ impl PlacementStrategy for LocalityAwarePlacement {
     ) -> Result<PlacementPlan> {
         debug!("Optimizing placement using locality-aware strategy");
 
-        let device_count = workload.compute_requirements.preferred_device_count.min(topology.devices.len());
+        let device_count = workload
+            .compute_requirements
+            .preferred_device_count
+            .min(topology.devices.len());
         let mut device_assignments = HashMap::new();
 
         // Select devices with best interconnectivity
@@ -821,7 +862,11 @@ impl PlacementStrategy for LocalityAwarePlacement {
 
             // Select remaining devices based on connectivity to already selected ones
             while selected_devices.len() < device_count && !available_devices.is_empty() {
-                let next_device = self.find_best_connected_device(&selected_devices, &available_devices, topology);
+                let next_device = self.find_best_connected_device(
+                    &selected_devices,
+                    &available_devices,
+                    topology,
+                );
                 selected_devices.push(next_device);
                 available_devices.retain(|&x| x != next_device);
             }
@@ -832,13 +877,17 @@ impl PlacementStrategy for LocalityAwarePlacement {
             device_assignments.insert(format!("component_{}", i), device_id);
         }
 
-        let performance_estimate = self.estimate_performance_internal(workload, &selected_devices, topology)?;
+        let performance_estimate =
+            self.estimate_performance_internal(workload, &selected_devices, topology)?;
 
         Ok(PlacementPlan {
             device_assignments,
             performance_estimate: performance_estimate.clone(),
             resource_utilization: ResourceUtilization {
-                memory_usage: selected_devices.iter().map(|&id| (id, workload.compute_requirements.memory_per_device)).collect(),
+                memory_usage: selected_devices
+                    .iter()
+                    .map(|&id| (id, workload.compute_requirements.memory_per_device))
+                    .collect(),
                 compute_utilization: selected_devices.iter().map(|&id| (id, 0.8)).collect(),
                 bandwidth_utilization: HashMap::new(),
                 power_consumption: selected_devices.len() as f32 * 300.0,
@@ -909,7 +958,12 @@ impl LocalityAwarePlacement {
         })
     }
 
-    fn estimate_compute_time(&self, workload: &Workload, devices: &[usize], topology: &GpuTopology) -> f64 {
+    fn estimate_compute_time(
+        &self,
+        workload: &Workload,
+        devices: &[usize],
+        topology: &GpuTopology,
+    ) -> f64 {
         let base_compute_time = 100.0; // Base 100ms
 
         // Adjust for device count (parallel efficiency)
@@ -920,21 +974,37 @@ impl LocalityAwarePlacement {
         };
 
         // Adjust for device capabilities
-        let capability_factor = devices.iter()
+        let capability_factor = devices
+            .iter()
             .filter_map(|&id| topology.devices.get(&id))
-            .map(|dev| if dev.capabilities.tensor_cores && workload.compute_requirements.benefits_from_tensor_cores { 0.5 } else { 1.0 })
+            .map(|dev| {
+                if dev.capabilities.tensor_cores
+                    && workload.compute_requirements.benefits_from_tensor_cores
+                {
+                    0.5
+                } else {
+                    1.0
+                }
+            })
             .fold(1.0, |acc, x| acc * x);
 
         base_compute_time * capability_factor / parallel_efficiency
     }
 
-    fn estimate_communication_overhead(&self, workload: &Workload, devices: &[usize], topology: &GpuTopology) -> f64 {
+    fn estimate_communication_overhead(
+        &self,
+        workload: &Workload,
+        devices: &[usize],
+        topology: &GpuTopology,
+    ) -> f64 {
         if devices.len() <= 1 {
             return 0.0;
         }
 
         let mut total_comm_time = 0.0;
-        let comm_volume = workload.communication_patterns.iter()
+        let comm_volume = workload
+            .communication_patterns
+            .iter()
             .map(|p| p.data_volume as f64)
             .sum::<f64>();
 
@@ -942,7 +1012,7 @@ impl LocalityAwarePlacement {
             // Estimate communication time based on worst link
             let mut min_bandwidth = f64::INFINITY;
             for i in 0..devices.len() {
-                for j in i+1..devices.len() {
+                for j in i + 1..devices.len() {
                     if let Some(link) = topology.links.get(&(devices[i], devices[j])) {
                         min_bandwidth = min_bandwidth.min(link.bandwidth_gbps);
                     }
@@ -950,7 +1020,8 @@ impl LocalityAwarePlacement {
             }
 
             if min_bandwidth != f64::INFINITY {
-                total_comm_time = comm_volume / (min_bandwidth * 1e9 / 8.0) * 1000.0; // Convert to ms
+                total_comm_time = comm_volume / (min_bandwidth * 1e9 / 8.0) * 1000.0;
+                // Convert to ms
             }
         }
 
@@ -998,8 +1069,12 @@ impl PlacementStrategy for BandwidthOptimizedPlacement {
         let mut sorted_devices: Vec<_> = device_bandwidth_scores.iter().collect();
         sorted_devices.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
 
-        let device_count = workload.compute_requirements.preferred_device_count.min(topology.devices.len());
-        let selected_devices: Vec<usize> = sorted_devices.iter()
+        let device_count = workload
+            .compute_requirements
+            .preferred_device_count
+            .min(topology.devices.len());
+        let selected_devices: Vec<usize> = sorted_devices
+            .iter()
             .take(device_count)
             .map(|(&id, _)| id)
             .collect();
@@ -1020,7 +1095,10 @@ impl PlacementStrategy for BandwidthOptimizedPlacement {
                 confidence: 0.9,
             },
             resource_utilization: ResourceUtilization {
-                memory_usage: selected_devices.iter().map(|&id| (id, workload.compute_requirements.memory_per_device)).collect(),
+                memory_usage: selected_devices
+                    .iter()
+                    .map(|&id| (id, workload.compute_requirements.memory_per_device))
+                    .collect(),
                 compute_utilization: selected_devices.iter().map(|&id| (id, 0.85)).collect(),
                 bandwidth_utilization: HashMap::new(),
                 power_consumption: selected_devices.len() as f32 * 320.0,
@@ -1078,8 +1156,12 @@ impl PlacementStrategy for PowerEfficientPlacement {
         let mut sorted_devices: Vec<_> = efficiency_scores.iter().collect();
         sorted_devices.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
 
-        let device_count = workload.compute_requirements.preferred_device_count.min(topology.devices.len());
-        let selected_devices: Vec<usize> = sorted_devices.iter()
+        let device_count = workload
+            .compute_requirements
+            .preferred_device_count
+            .min(topology.devices.len());
+        let selected_devices: Vec<usize> = sorted_devices
+            .iter()
             .take(device_count)
             .map(|(&id, _)| id)
             .collect();
@@ -1100,7 +1182,10 @@ impl PlacementStrategy for PowerEfficientPlacement {
                 confidence: 0.75,
             },
             resource_utilization: ResourceUtilization {
-                memory_usage: selected_devices.iter().map(|&id| (id, workload.compute_requirements.memory_per_device)).collect(),
+                memory_usage: selected_devices
+                    .iter()
+                    .map(|&id| (id, workload.compute_requirements.memory_per_device))
+                    .collect(),
                 compute_utilization: selected_devices.iter().map(|&id| (id, 0.7)).collect(),
                 bandwidth_utilization: HashMap::new(),
                 power_consumption: selected_devices.len() as f32 * 250.0,

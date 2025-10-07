@@ -74,7 +74,10 @@ impl Model {
     /// let session = model.create_session(options)?;
     /// # Ok::<(), ronn_api::Error>(())
     /// ```
-    pub fn create_session(&self, options: SessionOptions) -> Result<crate::session::InferenceSession> {
+    pub fn create_session(
+        &self,
+        options: SessionOptions,
+    ) -> Result<crate::session::InferenceSession> {
         SessionBuilder::new(self.inner.clone(), options).build()
     }
 
@@ -90,7 +93,11 @@ impl Model {
 
     /// Get input names
     pub fn input_names(&self) -> Vec<&str> {
-        self.inner.inputs().iter().map(|i| i.name.as_str()).collect()
+        self.inner
+            .inputs()
+            .iter()
+            .map(|i| i.name.as_str())
+            .collect()
     }
 
     /// Get output names

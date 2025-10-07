@@ -32,9 +32,7 @@ fn test_load_empty_path() {
 #[test]
 fn test_load_invalid_extension() {
     // Try to load a non-ONNX file (use absolute path)
-    let cargo_path = std::env::current_dir()
-        .unwrap()
-        .join("Cargo.toml");
+    let cargo_path = std::env::current_dir().unwrap().join("Cargo.toml");
 
     let result = Model::load(cargo_path);
 
@@ -50,7 +48,9 @@ fn test_from_bytes_empty() {
     if let Err(err) = result {
         let display = format!("{}", err);
         // Should indicate parsing failure
-        assert!(display.to_lowercase().contains("parse") || display.to_lowercase().contains("onnx"));
+        assert!(
+            display.to_lowercase().contains("parse") || display.to_lowercase().contains("onnx")
+        );
     }
 }
 
@@ -86,8 +86,8 @@ fn test_from_bytes_random_data() {
 fn test_load_valid_model() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load test model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load test model");
 
     // Model should be loaded successfully
     assert!(!model.input_names().is_empty() || !model.output_names().is_empty());
@@ -98,8 +98,8 @@ fn test_load_valid_model() {
 fn test_model_metadata() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load test model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load test model");
 
     // Should have some metadata (depends on model)
     let ir_version = model.ir_version();
@@ -111,8 +111,8 @@ fn test_model_metadata() {
 fn test_model_producer_name() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load test model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load test model");
 
     // Producer name may or may not be set
     let _producer = model.producer_name();
@@ -124,8 +124,8 @@ fn test_model_producer_name() {
 fn test_model_input_names() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load test model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load test model");
 
     let inputs = model.input_names();
     assert!(!inputs.is_empty(), "Model should have at least one input");
@@ -141,8 +141,8 @@ fn test_model_input_names() {
 fn test_model_output_names() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load test model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load test model");
 
     let outputs = model.output_names();
     assert!(!outputs.is_empty(), "Model should have at least one output");
@@ -158,8 +158,8 @@ fn test_model_output_names() {
 fn test_create_session_default() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load test model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load test model");
 
     let session = model.create_session_default();
     // Session creation might fail if providers aren't available
@@ -172,8 +172,8 @@ fn test_create_session_default() {
 fn test_create_session_with_options() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load test model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load test model");
 
     let options = SessionOptions::new()
         .with_optimization_level(OptimizationLevel::O1)
@@ -189,15 +189,14 @@ fn test_create_session_with_options() {
 fn test_multiple_sessions_from_same_model() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load test model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load test model");
 
     // Create multiple sessions
     let session1 = model.create_session_default();
     let session2 = model.create_session_default();
-    let session3 = model.create_session(
-        SessionOptions::new().with_optimization_level(OptimizationLevel::O3)
-    );
+    let session3 =
+        model.create_session(SessionOptions::new().with_optimization_level(OptimizationLevel::O3));
 
     // All sessions should be independent
     // (We can't directly test this without running inference,
@@ -210,8 +209,8 @@ fn test_multiple_sessions_from_same_model() {
 fn test_model_can_be_cloned_implicitly() {
     require_fixture!("simple_model.onnx");
 
-    let model = Model::load(common::fixture_path("simple_model.onnx"))
-        .expect("Failed to load test model");
+    let model =
+        Model::load(common::fixture_path("simple_model.onnx")).expect("Failed to load test model");
 
     // Model uses Arc internally, so it's cheap to clone
     let _session1 = model.create_session_default();

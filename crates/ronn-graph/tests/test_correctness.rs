@@ -297,11 +297,7 @@ fn test_optimization_never_breaks_valid_graph() {
         let optimizer = Optimizer::new(OptimizationLevel::O3);
         let result = optimizer.optimize(&mut graph);
 
-        assert!(
-            result.is_ok(),
-            "Optimization of graph {} should succeed",
-            i
-        );
+        assert!(result.is_ok(), "Optimization of graph {} should succeed", i);
         assert!(
             verify_graph_valid(&graph),
             "Graph {} should remain valid after optimization",
@@ -351,7 +347,10 @@ fn test_dead_code_removal_is_correct() {
     );
 
     // And graph should still be valid
-    assert!(verify_graph_valid(&graph), "Graph should be valid after dead code removal");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid after dead code removal"
+    );
 }
 
 // Invariant tests

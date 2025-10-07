@@ -7,8 +7,8 @@ mod test_utils;
 
 use anyhow::Result;
 use ronn_core::{
-    ArithmeticOps, DataType, GraphBuilder, MatrixOps, ReductionOps, SessionManager,
-    ShapeOps, Tensor, TensorLayout, AttributeValue,
+    ArithmeticOps, AttributeValue, DataType, GraphBuilder, MatrixOps, ReductionOps, SessionManager,
+    ShapeOps, Tensor, TensorLayout,
 };
 use test_utils::*;
 
@@ -24,7 +24,11 @@ async fn test_complete_inference_pipeline() -> Result<()> {
     builder
         .add_input(conv1_id, "input_data")
         .add_output(conv1_id, "conv1_out")
-        .add_attribute(conv1_id, "kernel_size", AttributeValue::IntArray(vec![3, 3]));
+        .add_attribute(
+            conv1_id,
+            "kernel_size",
+            AttributeValue::IntArray(vec![3, 3]),
+        );
 
     let relu_id = builder.add_op("ReLU", Some("relu".to_string()));
     builder
@@ -127,9 +131,7 @@ fn test_broadcasting_pipeline() -> Result<()> {
     let std = flattened.std_all()?;
 
     // Normalize
-    let normalized = batch_data
-        .sub(&mean)?
-        .div(&std)?;
+    let normalized = batch_data.sub(&mean)?.div(&std)?;
 
     assert_eq!(normalized.shape(), vec![4, 3, 32, 32]);
 
@@ -171,9 +173,7 @@ fn test_attention_mechanism_simulation() -> Result<()> {
     // Verify attention weights sum to 1 for each query
     let weights_data = attention_weights.to_vec()?;
     for i in 0..seq_len {
-        let row_sum: f32 = (0..seq_len)
-            .map(|j| weights_data[i * seq_len + j])
-            .sum();
+        let row_sum: f32 = (0..seq_len).map(|j| weights_data[i * seq_len + j]).sum();
         assert!((row_sum - 1.0).abs() < 1e-4);
     }
 
@@ -241,7 +241,9 @@ async fn test_multi_session_concurrent_inference() -> Result<()> {
             let manager_clone = Arc::clone(&manager);
             let input_clone = input.clone();
             let handle = tokio::spawn(async move {
-                manager_clone.run_inference(session_id, vec![input_clone]).await
+                manager_clone
+                    .run_inference(session_id, vec![input_clone])
+                    .await
             });
             handles.push(handle);
         }
@@ -250,7 +252,10 @@ async fn test_multi_session_concurrent_inference() -> Result<()> {
     let results: Vec<_> = futures::future::join_all(handles).await;
 
     // Most should succeed
-    let success_count = results.iter().filter(|r| r.as_ref().unwrap().is_ok()).count();
+    let success_count = results
+        .iter()
+        .filter(|r| r.as_ref().unwrap().is_ok())
+        .count();
     assert!(success_count > 10);
 
     // Verify global statistics
@@ -286,19 +291,11 @@ fn test_data_type_conversions() -> Result<()> {
     let data = vec![1.5, 2.5, 3.5, 4.5];
 
     // Test different data types
-    let f32_tensor = Tensor::from_data(
-        data.clone(),
-        vec![4],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    )?;
+    let f32_tensor =
+        Tensor::from_data(data.clone(), vec![4], DataType::F32, TensorLayout::RowMajor)?;
 
-    let f16_tensor = Tensor::from_data(
-        data.clone(),
-        vec![4],
-        DataType::F16,
-        TensorLayout::RowMajor,
-    )?;
+    let f16_tensor =
+        Tensor::from_data(data.clone(), vec![4], DataType::F16, TensorLayout::RowMajor)?;
 
     // Operations should preserve dtype
     let f32_result = f32_tensor.add_scalar(1.0)?;

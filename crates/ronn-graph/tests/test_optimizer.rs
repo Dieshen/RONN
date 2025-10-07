@@ -10,7 +10,11 @@ use ronn_graph::{OptimizationLevel, Optimizer};
 #[test]
 fn test_optimizer_o0_no_passes() {
     let optimizer = Optimizer::new(OptimizationLevel::O0);
-    assert_eq!(optimizer.pass_count(), 0, "O0 should have no optimization passes");
+    assert_eq!(
+        optimizer.pass_count(),
+        0,
+        "O0 should have no optimization passes"
+    );
     assert_eq!(optimizer.level(), OptimizationLevel::O0);
 }
 
@@ -55,11 +59,17 @@ fn test_optimizer_o0_runs_successfully() {
     let optimizer = Optimizer::new(OptimizationLevel::O0);
 
     let result = optimizer.optimize(&mut graph);
-    assert!(result.is_ok(), "O0 optimization should complete successfully");
+    assert!(
+        result.is_ok(),
+        "O0 optimization should complete successfully"
+    );
 
     let stats = result.unwrap();
     // O0 has no passes, so iterations should be minimal (1 iteration with no changes)
-    assert!(stats.iterations <= 1, "O0 should perform minimal iterations");
+    assert!(
+        stats.iterations <= 1,
+        "O0 should perform minimal iterations"
+    );
     assert_eq!(stats.total_changes(), 0, "O0 should make no changes");
 }
 
@@ -69,10 +79,16 @@ fn test_optimizer_o1_runs_successfully() {
     let optimizer = Optimizer::new(OptimizationLevel::O1);
 
     let result = optimizer.optimize(&mut graph);
-    assert!(result.is_ok(), "O1 optimization should complete successfully");
+    assert!(
+        result.is_ok(),
+        "O1 optimization should complete successfully"
+    );
 
     let stats = result.unwrap();
-    assert!(stats.iterations > 0, "O1 should perform at least one iteration");
+    assert!(
+        stats.iterations > 0,
+        "O1 should perform at least one iteration"
+    );
 }
 
 #[test]
@@ -81,10 +97,16 @@ fn test_optimizer_o2_runs_successfully() {
     let optimizer = Optimizer::new(OptimizationLevel::O2);
 
     let result = optimizer.optimize(&mut graph);
-    assert!(result.is_ok(), "O2 optimization should complete successfully");
+    assert!(
+        result.is_ok(),
+        "O2 optimization should complete successfully"
+    );
 
     let stats = result.unwrap();
-    assert!(stats.iterations > 0, "O2 should perform at least one iteration");
+    assert!(
+        stats.iterations > 0,
+        "O2 should perform at least one iteration"
+    );
 }
 
 #[test]
@@ -93,10 +115,16 @@ fn test_optimizer_o3_runs_successfully() {
     let optimizer = Optimizer::new(OptimizationLevel::O3);
 
     let result = optimizer.optimize(&mut graph);
-    assert!(result.is_ok(), "O3 optimization should complete successfully");
+    assert!(
+        result.is_ok(),
+        "O3 optimization should complete successfully"
+    );
 
     let stats = result.unwrap();
-    assert!(stats.iterations > 0, "O3 should perform at least one iteration");
+    assert!(
+        stats.iterations > 0,
+        "O3 should perform at least one iteration"
+    );
 }
 
 // Graph validity preservation tests
@@ -106,11 +134,17 @@ fn test_optimizer_preserves_graph_validity_o1() {
     let mut graph = create_simple_conv_graph();
     let optimizer = Optimizer::new(OptimizationLevel::O1);
 
-    assert!(verify_graph_valid(&graph), "Graph should be valid before optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid before optimization"
+    );
 
     optimizer.optimize(&mut graph).unwrap();
 
-    assert!(verify_graph_valid(&graph), "Graph should remain valid after O1 optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should remain valid after O1 optimization"
+    );
 }
 
 #[test]
@@ -118,11 +152,17 @@ fn test_optimizer_preserves_graph_validity_o2() {
     let mut graph = create_fusible_graph();
     let optimizer = Optimizer::new(OptimizationLevel::O2);
 
-    assert!(verify_graph_valid(&graph), "Graph should be valid before optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid before optimization"
+    );
 
     optimizer.optimize(&mut graph).unwrap();
 
-    assert!(verify_graph_valid(&graph), "Graph should remain valid after O2 optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should remain valid after O2 optimization"
+    );
 }
 
 #[test]
@@ -130,11 +170,17 @@ fn test_optimizer_preserves_graph_validity_o3() {
     let mut graph = create_conv_heavy_graph();
     let optimizer = Optimizer::new(OptimizationLevel::O3);
 
-    assert!(verify_graph_valid(&graph), "Graph should be valid before optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should be valid before optimization"
+    );
 
     optimizer.optimize(&mut graph).unwrap();
 
-    assert!(verify_graph_valid(&graph), "Graph should remain valid after O3 optimization");
+    assert!(
+        verify_graph_valid(&graph),
+        "Graph should remain valid after O3 optimization"
+    );
 }
 
 // Empty graph tests
@@ -148,7 +194,11 @@ fn test_optimizer_handles_empty_graph_o1() {
     assert!(result.is_ok(), "Should handle empty graph at O1");
 
     let stats = result.unwrap();
-    assert_eq!(stats.total_changes(), 0, "Empty graph should have no changes");
+    assert_eq!(
+        stats.total_changes(),
+        0,
+        "Empty graph should have no changes"
+    );
 }
 
 #[test]
@@ -160,7 +210,11 @@ fn test_optimizer_handles_empty_graph_o3() {
     assert!(result.is_ok(), "Should handle empty graph at O3");
 
     let stats = result.unwrap();
-    assert_eq!(stats.total_changes(), 0, "Empty graph should have no changes");
+    assert_eq!(
+        stats.total_changes(),
+        0,
+        "Empty graph should have no changes"
+    );
 }
 
 // Optimization level progression tests
@@ -227,10 +281,7 @@ fn test_optimizer_statistics_structure() {
 
     // Verify statistics are properly tracked
     assert!(stats.iterations > 0, "Should track iterations");
-    assert!(
-        stats.total_changes() >= 0,
-        "Should track total changes"
-    );
+    assert!(stats.total_changes() >= 0, "Should track total changes");
 }
 
 #[test]
@@ -357,10 +408,7 @@ fn test_optimizer_multiple_optimization_rounds() {
         stats.iterations >= 1,
         "Complex graph should require at least one iteration"
     );
-    assert!(
-        stats.iterations <= 10,
-        "Should not exceed max iterations"
-    );
+    assert!(stats.iterations <= 10, "Should not exceed max iterations");
 }
 
 // Helper function for complex graph
@@ -399,14 +447,10 @@ fn create_complex_optimization_graph() -> ronn_core::ModelGraph {
         .add_input(output_id, "relu_output")
         .add_output(output_id, "output_tensor");
 
-    builder
-        .connect(input_id, conv_id, "input_tensor")
-        .unwrap();
+    builder.connect(input_id, conv_id, "input_tensor").unwrap();
     builder.connect(conv_id, bn_id, "conv_output").unwrap();
     builder.connect(bn_id, relu_id, "bn_output").unwrap();
-    builder
-        .connect(relu_id, output_id, "relu_output")
-        .unwrap();
+    builder.connect(relu_id, output_id, "relu_output").unwrap();
 
     builder
         .set_inputs(vec!["input_tensor".to_string()])

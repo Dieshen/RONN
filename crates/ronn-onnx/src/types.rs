@@ -8,16 +8,16 @@ pub struct DataTypeMapper;
 impl DataTypeMapper {
     pub fn from_onnx(onnx_type: i32) -> Result<DataType> {
         match onnx_type {
-            1 => Ok(DataType::F32),      // FLOAT
-            2 => Ok(DataType::U8),       // UINT8
-            3 => Ok(DataType::I8),       // INT8
-            6 => Ok(DataType::I32),      // INT32
-            7 => Ok(DataType::I64),      // INT64
-            9 => Ok(DataType::Bool),     // BOOL
-            10 => Ok(DataType::F16),     // FLOAT16
-            11 => Ok(DataType::F64),     // DOUBLE
-            12 => Ok(DataType::U32),     // UINT32
-            16 => Ok(DataType::BF16),    // BFLOAT16
+            1 => Ok(DataType::F32),   // FLOAT
+            2 => Ok(DataType::U8),    // UINT8
+            3 => Ok(DataType::I8),    // INT8
+            6 => Ok(DataType::I32),   // INT32
+            7 => Ok(DataType::I64),   // INT64
+            9 => Ok(DataType::Bool),  // BOOL
+            10 => Ok(DataType::F16),  // FLOAT16
+            11 => Ok(DataType::F64),  // DOUBLE
+            12 => Ok(DataType::U32),  // UINT32
+            16 => Ok(DataType::BF16), // BFLOAT16
             _ => Err(OnnxError::TypeConversionError(format!(
                 "Unsupported ONNX data type: {}",
                 onnx_type

@@ -25,56 +25,49 @@ fn test_new_creates_default() {
 
 #[test]
 fn test_with_optimization_level_o0() {
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O0);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O0);
 
     assert_eq!(options.optimization_level(), OptimizationLevel::O0);
 }
 
 #[test]
 fn test_with_optimization_level_o1() {
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O1);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O1);
 
     assert_eq!(options.optimization_level(), OptimizationLevel::O1);
 }
 
 #[test]
 fn test_with_optimization_level_o2() {
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O2);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O2);
 
     assert_eq!(options.optimization_level(), OptimizationLevel::O2);
 }
 
 #[test]
 fn test_with_optimization_level_o3() {
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O3);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O3);
 
     assert_eq!(options.optimization_level(), OptimizationLevel::O3);
 }
 
 #[test]
 fn test_with_provider_cpu() {
-    let options = SessionOptions::new()
-        .with_provider(ProviderType::CPU);
+    let options = SessionOptions::new().with_provider(ProviderType::CPU);
 
     assert_eq!(options.provider_type(), ProviderType::CPU);
 }
 
 #[test]
 fn test_with_provider_gpu() {
-    let options = SessionOptions::new()
-        .with_provider(ProviderType::GPU);
+    let options = SessionOptions::new().with_provider(ProviderType::GPU);
 
     assert_eq!(options.provider_type(), ProviderType::GPU);
 }
 
 #[test]
 fn test_with_num_threads() {
-    let options = SessionOptions::new()
-        .with_num_threads(4);
+    let options = SessionOptions::new().with_num_threads(4);
 
     // Note: num_threads is private, so we can't directly assert it
     // This test verifies the builder method compiles and returns Self
@@ -83,24 +76,21 @@ fn test_with_num_threads() {
 
 #[test]
 fn test_with_num_threads_single() {
-    let options = SessionOptions::new()
-        .with_num_threads(1);
+    let options = SessionOptions::new().with_num_threads(1);
 
     assert_eq!(options.optimization_level(), OptimizationLevel::O2);
 }
 
 #[test]
 fn test_with_num_threads_many() {
-    let options = SessionOptions::new()
-        .with_num_threads(16);
+    let options = SessionOptions::new().with_num_threads(16);
 
     assert_eq!(options.optimization_level(), OptimizationLevel::O2);
 }
 
 #[test]
 fn test_with_profiling_enabled() {
-    let options = SessionOptions::new()
-        .with_profiling(true);
+    let options = SessionOptions::new().with_profiling(true);
 
     // Profiling field is private, so we verify the builder works
     assert_eq!(options.optimization_level(), OptimizationLevel::O2);
@@ -108,8 +98,7 @@ fn test_with_profiling_enabled() {
 
 #[test]
 fn test_with_profiling_disabled() {
-    let options = SessionOptions::new()
-        .with_profiling(false);
+    let options = SessionOptions::new().with_profiling(false);
 
     assert_eq!(options.optimization_level(), OptimizationLevel::O2);
 }
@@ -195,8 +184,7 @@ fn test_multiple_independent_options() {
 
 #[test]
 fn test_options_move_semantics() {
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O3);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O3);
 
     // Move the options
     let moved_options = options;
@@ -229,15 +217,12 @@ fn test_provider_types_distinct() {
 
 #[test]
 fn test_session_options_reusable() {
-    let base_options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O2);
+    let base_options = SessionOptions::new().with_optimization_level(OptimizationLevel::O2);
 
     // Clone and modify
-    let gpu_options = base_options.clone()
-        .with_provider(ProviderType::GPU);
+    let gpu_options = base_options.clone().with_provider(ProviderType::GPU);
 
-    let cpu_options = base_options.clone()
-        .with_provider(ProviderType::CPU);
+    let cpu_options = base_options.clone().with_provider(ProviderType::CPU);
 
     // Original should be unchanged
     assert_eq!(base_options.optimization_level(), OptimizationLevel::O2);

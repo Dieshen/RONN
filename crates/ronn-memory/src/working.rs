@@ -1,6 +1,6 @@
 //! Working Memory - Short-term storage with attention weighting
 
-use crate::{MemoryError, MemoryId, Result, current_timestamp};
+use crate::{current_timestamp, MemoryError, MemoryId, Result};
 use ronn_core::tensor::Tensor;
 use std::collections::{HashMap, VecDeque};
 
@@ -169,7 +169,8 @@ mod tests {
         // Add 4 items (should evict oldest)
         for i in 0..4 {
             let data = vec![i as f32; 2];
-            let tensor = Tensor::from_data(data, vec![1, 2], DataType::F32, TensorLayout::RowMajor)?;
+            let tensor =
+                Tensor::from_data(data, vec![1, 2], DataType::F32, TensorLayout::RowMajor)?;
             wm.store(tensor, 0.5)?;
         }
 

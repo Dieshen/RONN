@@ -12,9 +12,9 @@
 //! - **System 2 (Slow)**: Full precision for complex, novel queries (higher accuracy)
 
 use ronn_api::prelude::*;
-use ronn_providers::ProviderType;
-use ronn_hrm::{HierarchicalReasoningModule, RoutingStrategy};
 use ronn_core::types::{DataType, TensorLayout};
+use ronn_hrm::{HierarchicalReasoningModule, RoutingStrategy};
+use ronn_providers::ProviderType;
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -71,12 +71,19 @@ fn compare_bitnet_vs_full_precision() -> Result<(), Box<dyn std::error::Error>> 
         // Estimate memory usage (simplified)
         let memory_bytes = match provider_type {
             ProviderType::BitNet => tensor.numel() / 8, // 1-bit per element
-            _ => tensor.numel() * 4, // 32-bit float per element
+            _ => tensor.numel() * 4,                    // 32-bit float per element
         };
 
         println!("     Latency: {:?}", duration);
         println!("     Memory: {} bytes", memory_bytes);
-        println!("     Compression: {}x", if matches!(provider_type, ProviderType::BitNet) { "32" } else { "1" });
+        println!(
+            "     Compression: {}x",
+            if matches!(provider_type, ProviderType::BitNet) {
+                "32"
+            } else {
+                "1"
+            }
+        );
         println!();
     }
 
@@ -95,13 +102,20 @@ fn demonstrate_adaptive_routing() -> Result<(), Box<dyn std::error::Error>> {
     // Define test cases with different complexity levels
     let test_cases = vec![
         ("Simple: [1,2,3,4]", vec![1.0, 2.0, 3.0, 4.0], vec![1, 4]),
-        ("Moderate: sine wave", (0..16).map(|x| (x as f32 * 0.1).sin()).collect(), vec![1, 16]),
-        ("Complex: large varied tensor",
-            (0..1024).map(|x| {
-                let t = x as f32 * 0.01;
-                (t.sin() * t.cos() * (t * 3.0).sin()) + (x as f32 % 7.0) * 0.5
-            }).collect(),
-            vec![1, 1024]
+        (
+            "Moderate: sine wave",
+            (0..16).map(|x| (x as f32 * 0.1).sin()).collect(),
+            vec![1, 16],
+        ),
+        (
+            "Complex: large varied tensor",
+            (0..1024)
+                .map(|x| {
+                    let t = x as f32 * 0.01;
+                    (t.sin() * t.cos() * (t * 3.0).sin()) + (x as f32 % 7.0) * 0.5
+                })
+                .collect(),
+            vec![1, 1024],
         ),
     ];
 
@@ -109,12 +123,7 @@ fn demonstrate_adaptive_routing() -> Result<(), Box<dyn std::error::Error>> {
         println!("  🔍 Input: {}", name);
 
         // Create tensor
-        let tensor = Tensor::from_data(
-            data,
-            shape,
-            DataType::F32,
-            TensorLayout::RowMajor,
-        )?;
+        let tensor = Tensor::from_data(data, shape, DataType::F32, TensorLayout::RowMajor)?;
 
         // Time the processing
         let start = Instant::now();
@@ -122,14 +131,23 @@ fn demonstrate_adaptive_routing() -> Result<(), Box<dyn std::error::Error>> {
         let duration = start.elapsed();
 
         // Display routing decision
-        println!("     Complexity Level: {:?}", result.complexity_metrics.level);
-        println!("     Complexity Score: {:.3}", result.complexity_metrics.complexity_score);
+        println!(
+            "     Complexity Level: {:?}",
+            result.complexity_metrics.level
+        );
+        println!(
+            "     Complexity Score: {:.3}",
+            result.complexity_metrics.complexity_score
+        );
         println!("     Execution Path: {:?}", result.path_taken);
-        println!("     System: {}", match result.path_taken {
-            ronn_hrm::ExecutionPath::System1 => "System 1 (Fast/BitNet)",
-            ronn_hrm::ExecutionPath::System2 => "System 2 (Slow/Precise)",
-            ronn_hrm::ExecutionPath::Hybrid => "Hybrid (Mixed)",
-        });
+        println!(
+            "     System: {}",
+            match result.path_taken {
+                ronn_hrm::ExecutionPath::System1 => "System 1 (Fast/BitNet)",
+                ronn_hrm::ExecutionPath::System2 => "System 2 (Slow/Precise)",
+                ronn_hrm::ExecutionPath::Hybrid => "Hybrid (Mixed)",
+            }
+        );
         println!("     Confidence: {:.2}%", result.confidence * 100.0);
         println!("     Latency: {:?}", duration);
         println!();
@@ -140,15 +158,18 @@ fn demonstrate_adaptive_routing() -> Result<(), Box<dyn std::error::Error>> {
     let total_requests = metrics.system1_count + metrics.system2_count + metrics.hybrid_count;
     println!("📊 HRM Routing Statistics:");
     println!("   Total requests: {}", total_requests);
-    println!("   System 1 (Fast): {} requests ({:.1}%)",
+    println!(
+        "   System 1 (Fast): {} requests ({:.1}%)",
         metrics.system1_count,
         (metrics.system1_count as f64 / total_requests as f64) * 100.0
     );
-    println!("   System 2 (Slow): {} requests ({:.1}%)",
+    println!(
+        "   System 2 (Slow): {} requests ({:.1}%)",
         metrics.system2_count,
         (metrics.system2_count as f64 / total_requests as f64) * 100.0
     );
-    println!("   Hybrid: {} requests ({:.1}%)",
+    println!(
+        "   Hybrid: {} requests ({:.1}%)",
         metrics.hybrid_count,
         (metrics.hybrid_count as f64 / total_requests as f64) * 100.0
     );
@@ -189,7 +210,8 @@ mod tests {
 
     #[test]
     fn test_hrm_routing() {
-        let mut hrm = HierarchicalReasoningModule::with_strategy(RoutingStrategy::AdaptiveComplexity);
+        let mut hrm =
+            HierarchicalReasoningModule::with_strategy(RoutingStrategy::AdaptiveComplexity);
 
         // Simple input should route to System 1
         let simple_data = vec![1.0; 4];
@@ -198,10 +220,14 @@ mod tests {
             vec![1, 4],
             DataType::F32,
             TensorLayout::RowMajor,
-        ).unwrap();
+        )
+        .unwrap();
 
         let result = hrm.process(&simple).unwrap();
-        assert!(matches!(result.complexity_metrics.level, ComplexityLevel::Low));
+        assert!(matches!(
+            result.complexity_metrics.level,
+            ComplexityLevel::Low
+        ));
     }
 
     #[test]
@@ -209,12 +235,8 @@ mod tests {
         let mut hrm = HierarchicalReasoningModule::new();
 
         let data = vec![1.0, 2.0, 3.0, 4.0];
-        let tensor = Tensor::from_data(
-            data,
-            vec![1, 4],
-            DataType::F32,
-            TensorLayout::RowMajor,
-        ).unwrap();
+        let tensor =
+            Tensor::from_data(data, vec![1, 4], DataType::F32, TensorLayout::RowMajor).unwrap();
 
         let _ = hrm.process(&tensor).unwrap();
 

@@ -10,23 +10,15 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use ronn_core::{CompiledKernel, KernelStats, MemoryUsage, SubGraph, Tensor};
 
-use super::quantization::{BinaryTensor, TernaryTensor, BitNetQuantizer, QuantizationMethod};
+use super::quantization::{BinaryTensor, BitNetQuantizer, QuantizationMethod, TernaryTensor};
 
 /// BitNet kernel operations.
 #[derive(Debug, Clone)]
 pub enum BitNetOperation {
     /// Binary matrix multiplication using XNOR + popcount.
-    BinaryMatMul {
-        m: usize,
-        n: usize,
-        k: usize,
-    },
+    BinaryMatMul { m: usize, n: usize, k: usize },
     /// Ternary matrix multiplication.
-    TernaryMatMul {
-        m: usize,
-        n: usize,
-        k: usize,
-    },
+    TernaryMatMul { m: usize, n: usize, k: usize },
     /// Element-wise binary operations.
     BinaryElementWise {
         op_type: String,
@@ -90,7 +82,12 @@ impl BitNetKernel {
         if a.shape != [m, k] || b.shape != [k, n] {
             return Err(anyhow!(
                 "Matrix dimension mismatch: A={:?}, B={:?}, expected A=[{},{}], B=[{},{}]",
-                a.shape, b.shape, m, k, k, n
+                a.shape,
+                b.shape,
+                m,
+                k,
+                k,
+                n
             ));
         }
 
@@ -145,7 +142,12 @@ impl BitNetKernel {
         if a.shape != [m, k] || b.shape != [k, n] {
             return Err(anyhow!(
                 "Matrix dimension mismatch: A={:?}, B={:?}, expected A=[{},{}], B=[{},{}]",
-                a.shape, b.shape, m, k, k, n
+                a.shape,
+                b.shape,
+                m,
+                k,
+                k,
+                n
             ));
         }
 
@@ -189,19 +191,22 @@ impl BitNetKernel {
     }
 
     /// Execute element-wise binary operation.
-    fn execute_binary_elementwise(
-        inputs: &[BinaryTensor],
-        op_type: &str,
-    ) -> Result<BinaryTensor> {
+    fn execute_binary_elementwise(inputs: &[BinaryTensor], op_type: &str) -> Result<BinaryTensor> {
         if inputs.len() != 2 {
-            return Err(anyhow!("Binary element-wise operations require exactly 2 inputs"));
+            return Err(anyhow!(
+                "Binary element-wise operations require exactly 2 inputs"
+            ));
         }
 
         let a = &inputs[0];
         let b = &inputs[1];
 
         if a.shape != b.shape {
-            return Err(anyhow!("Shape mismatch for element-wise operation: {:?} vs {:?}", a.shape, b.shape));
+            return Err(anyhow!(
+                "Shape mismatch for element-wise operation: {:?} vs {:?}",
+                a.shape,
+                b.shape
+            ));
         }
 
         let byte_count = a.packed_data.len();
@@ -240,7 +245,8 @@ impl BitNetKernel {
 
             // Update running average
             let n = self.stats.execution_count as f64;
-            self.stats.average_time_us = ((n - 1.0) * self.stats.average_time_us + execution_time_us) / n;
+            self.stats.average_time_us =
+                ((n - 1.0) * self.stats.average_time_us + execution_time_us) / n;
         }
     }
 }
@@ -261,7 +267,7 @@ impl CompiledKernel for BitNetKernel {
 
                 let result = BitNetKernel::execute_binary_matmul(&a_binary, &b_binary, *m, *n, *k)?;
                 vec![result]
-            },
+            }
             BitNetOperation::TernaryMatMul { m, n, k } => {
                 if inputs.len() != 2 {
                     return Err(anyhow!("Ternary MatMul requires exactly 2 inputs"));
@@ -271,22 +277,29 @@ impl CompiledKernel for BitNetKernel {
                 let a_ternary = self.quantizer.quantize_ternary(&inputs[0])?;
                 let b_ternary = self.quantizer.quantize_ternary(&inputs[1])?;
 
-                let result = BitNetKernel::execute_ternary_matmul(&a_ternary, &b_ternary, *m, *n, *k)?;
+                let result =
+                    BitNetKernel::execute_ternary_matmul(&a_ternary, &b_ternary, *m, *n, *k)?;
                 vec![result]
-            },
+            }
             BitNetOperation::BinaryElementWise { op_type, .. } => {
                 if inputs.len() != 2 {
-                    return Err(anyhow!("Binary element-wise operations require exactly 2 inputs"));
+                    return Err(anyhow!(
+                        "Binary element-wise operations require exactly 2 inputs"
+                    ));
                 }
 
                 let a_binary = self.quantizer.quantize_binary(&inputs[0])?;
                 let b_binary = self.quantizer.quantize_binary(&inputs[1])?;
 
-                let binary_result = BitNetKernel::execute_binary_elementwise(&[a_binary, b_binary], op_type)?;
+                let binary_result =
+                    BitNetKernel::execute_binary_elementwise(&[a_binary, b_binary], op_type)?;
                 let result = self.quantizer.dequantize_binary(&binary_result)?;
                 vec![result]
-            },
-            BitNetOperation::QuantizedBatchNorm { channels, spatial_size } => {
+            }
+            BitNetOperation::QuantizedBatchNorm {
+                channels,
+                spatial_size,
+            } => {
                 // Simplified quantized batch norm
                 if inputs.len() < 3 {
                     return Err(anyhow!("Quantized BatchNorm requires at least 3 inputs"));
@@ -294,7 +307,7 @@ impl CompiledKernel for BitNetKernel {
 
                 // For now, just pass through the input (would need proper implementation)
                 vec![inputs[0].clone()]
-            },
+            }
         };
 
         let execution_time = start_time.elapsed().as_micros() as f64;
@@ -352,7 +365,9 @@ mod tests {
 
         // Create test matrices
         let a_data = vec![1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0]; // 2x4
-        let b_data = vec![1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0]; // 4x3
+        let b_data = vec![
+            1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0,
+        ]; // 4x3
 
         let a = Tensor::from_data(a_data, vec![2, 4], DataType::F32, TensorLayout::RowMajor)?;
         let b = Tensor::from_data(b_data, vec![4, 3], DataType::F32, TensorLayout::RowMajor)?;

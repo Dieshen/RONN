@@ -59,8 +59,7 @@ pub fn bench_latency_target(c: &mut Criterion) {
     }
 
     let model = Model::load(&model_path).unwrap();
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O2);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O2);
 
     let session = model.create_session(options).unwrap();
     let input = create_test_input(vec![1, 3, 224, 224]);
@@ -95,8 +94,7 @@ pub fn bench_throughput_target(c: &mut Criterion) {
     }
 
     let model = Model::load(&model_path).unwrap();
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O3);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O3);
 
     let session = model.create_session(options).unwrap();
     let input = create_test_input(vec![1, 3, 224, 224]);
@@ -166,7 +164,9 @@ pub fn bench_memory_target(c: &mut Criterion) {
     let targets = PerformanceTargets::default();
     eprintln!("\n=== Memory Target ===");
     eprintln!("Target: <{} GB total system usage", targets.memory_usage_gb);
-    eprintln!("Note: Use external profilers (valgrind, heaptrack) for accurate memory measurements");
+    eprintln!(
+        "Note: Use external profilers (valgrind, heaptrack) for accurate memory measurements"
+    );
 
     group.finish();
 }
@@ -207,8 +207,7 @@ pub fn bench_batch_efficiency(c: &mut Criterion) {
     }
 
     let model = Model::load(&model_path).unwrap();
-    let options = SessionOptions::new()
-        .with_optimization_level(OptimizationLevel::O2);
+    let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O2);
 
     let session = model.create_session(options).unwrap();
 
@@ -258,24 +257,19 @@ pub fn bench_optimization_regression(c: &mut Criterion) {
     ];
 
     for (name, level) in optimization_levels.iter() {
-        group.bench_with_input(
-            BenchmarkId::new("opt_level", name),
-            level,
-            |b, &level| {
-                let model = Model::load(&model_path).unwrap();
-                let options = SessionOptions::new()
-                    .with_optimization_level(level);
+        group.bench_with_input(BenchmarkId::new("opt_level", name), level, |b, &level| {
+            let model = Model::load(&model_path).unwrap();
+            let options = SessionOptions::new().with_optimization_level(level);
 
-                let session = model.create_session(options).unwrap();
-                let input = create_test_input(vec![1, 3, 224, 224]);
+            let session = model.create_session(options).unwrap();
+            let input = create_test_input(vec![1, 3, 224, 224]);
 
-                b.iter(|| {
-                    let mut inputs = HashMap::new();
-                    inputs.insert("input", input.clone());
-                    let _result = session.run(black_box(inputs)).unwrap();
-                });
-            },
-        );
+            b.iter(|| {
+                let mut inputs = HashMap::new();
+                inputs.insert("input", input.clone());
+                let _result = session.run(black_box(inputs)).unwrap();
+            });
+        });
     }
 
     eprintln!("\n=== Optimization Regression ===");
@@ -344,8 +338,7 @@ pub fn bench_e2e_baseline(c: &mut Criterion) {
         b.iter(|| {
             // Full pipeline: load model, create session, run inference
             let model = Model::load(black_box(&model_path)).unwrap();
-            let options = SessionOptions::new()
-                .with_optimization_level(OptimizationLevel::O2);
+            let options = SessionOptions::new().with_optimization_level(OptimizationLevel::O2);
 
             let session = model.create_session(options).unwrap();
             let input = create_test_input(vec![1, 3, 224, 224]);

@@ -254,7 +254,8 @@ fn test_invalid_norm_p() {
         vec![3],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // Negative p should fail
     assert!(a.norm_p(-1.0).is_err());
@@ -432,12 +433,7 @@ fn test_count_nonzero() -> Result<()> {
 
 #[test]
 fn test_reduction_on_empty_dimensions() -> Result<()> {
-    let a = Tensor::from_data(
-        vec![1.0],
-        vec![1],
-        DataType::F32,
-        TensorLayout::RowMajor,
-    )?;
+    let a = Tensor::from_data(vec![1.0], vec![1], DataType::F32, TensorLayout::RowMajor)?;
 
     let sum = a.sum_all()?;
     assert_tensor_eq(&sum, &[1.0])?;
@@ -472,7 +468,8 @@ fn test_reduction_errors() {
         vec![2, 2],
         DataType::F32,
         TensorLayout::RowMajor,
-    ).unwrap();
+    )
+    .unwrap();
 
     // Out of bounds dimension
     assert!(a.sum_dim(5, false).is_err());
