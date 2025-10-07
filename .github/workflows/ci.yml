@@ -26,7 +26,7 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Check workspace
-      run: cargo check --workspace --all-features
+      run: cargo check --workspace
 
   fmt:
     name: Rustfmt
@@ -59,7 +59,7 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Run Clippy
-      run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      run: cargo clippy --workspace --all-targets -- -D warnings
 
   test:
     name: Test Suite
