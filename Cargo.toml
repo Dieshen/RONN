@@ -149,23 +149,22 @@ harness = false
 name = "end_to_end_simple"
 harness = false
 
-# Full benchmarks (require API fixes)
-# [[bench]]
-# name = "end_to_end"
-# harness = false
+[[bench]]
+name = "end_to_end"
+harness = false
 
-# [[bench]]
-# name = "comparative"
-# harness = false
-# required-features = ["comparative"]
+[[bench]]
+name = "comparative"
+harness = false
+required-features = ["comparative"]
 
-# [[bench]]
-# name = "integration"
-# harness = false
+[[bench]]
+name = "integration"
+harness = false
 
-# [[bench]]
-# name = "regression"
-# harness = false
+[[bench]]
+name = "regression"
+harness = false
 
 [profile.dev]
 # Fast compilation for development
