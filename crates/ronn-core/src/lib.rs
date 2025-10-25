@@ -32,6 +32,7 @@
 /// Error types for core operations
 pub mod error;
 pub mod graph;
+pub mod logging;
 pub mod ops;
 pub mod session;
 pub mod tensor;
